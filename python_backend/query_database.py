@@ -30,7 +30,7 @@ def query_database(query_text:str, database_name:str, collection_name:str):
         'path': 'plot_embedding', 
         'queryVector': query_vector,
         'numCandidates': 200, 
-        'limit': 5
+        'limit': 10
       }
     }, {
       '$project': {
@@ -47,15 +47,12 @@ def query_database(query_text:str, database_name:str, collection_name:str):
   # run pipeline
   result = client[database_name][collection_name].aggregate(pipeline)
 
-  # print results
-  for i in result:
-      print(i)
   
   return result 
 
-result = query_database("can I park overnight on the street", "bylaws", "all_bylaws")
+result = query_database("can i park on bartly drive?", "bylaws", "all_bylaws")
 
 
 import python_to_gemini
 
-python_to_gemini.generate("can I park overnight on the street",result)
+python_to_gemini.generate("can i park on bartly drive?",result)
