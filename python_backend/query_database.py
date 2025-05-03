@@ -1,3 +1,4 @@
+import embed_vectors
 #for git
 from dotenv import load_dotenv
 import os
@@ -18,11 +19,8 @@ def query_database(query_text:str, database_name:str, collection_name:str):
 
   #TODO
   #generate this vector using the query_text
-  query_vector = []
+  query_vector = embed_vectors.embed_text(query_text)
 
-  #these are the current info i got but add more if there is more data
-  #By-law No.
-  #By-law Title
 
   # define pipeline
   pipeline = [
@@ -31,14 +29,14 @@ def query_database(query_text:str, database_name:str, collection_name:str):
         'index': 'vector_index', 
         'path': 'plot_embedding', 
         'queryVector': query_vector,
-        'numCandidates': 150, 
-        'limit': 10
+        'numCandidates': 400, 
+        'limit': 5
       }
     }, {
       '$project': {
         '_id': 0, 
-        'By-law No.': 1, 
-        'By-law Title': 1, 
+        'title': 1, 
+        'pdf': 1, 
         'score': {
           '$meta': 'vectorSearchScore'
         }
@@ -46,6 +44,11 @@ def query_database(query_text:str, database_name:str, collection_name:str):
     }
   ]
 
+
+  sample = client["bylaws"]["1-304"].find_one()
+  print(sample.keys())
+  print(len(sample["plot_embedding"]))  # should be 1536
+  
   #TODO optional: loop this for multiple collections if that is how to data ends up
   # run pipeline
   result = client[database_name][collection_name].aggregate(pipeline)
@@ -55,4 +58,5 @@ def query_database(query_text:str, database_name:str, collection_name:str):
       print(i)
   
   return result 
-  
+
+query_database("can I park overnight on the street", "bylaws", "1-304")

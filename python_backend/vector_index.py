@@ -31,7 +31,7 @@ def initalize_vector_index(database_name:str, collection_name:str):
         {
           "type": "vector",
           "path": "plot_embedding",
-          "numDimensions": 1536,
+          "numDimensions": 384,
           "similarity": "dotProduct",
           "quantization": "scalar"
         }
