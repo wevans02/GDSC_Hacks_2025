@@ -23,8 +23,9 @@ def parse_html(file_name:str):
             bylaws.append({
                 "_id": number,
                 "title": title,
-                "pdf": link
-            })
+                "pdf": link,
+                "pdf_content": ""
+            }) 
 
     # return the json list
     return bylaws

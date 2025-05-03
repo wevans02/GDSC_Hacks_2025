@@ -10,7 +10,7 @@ def embed_text(text: str) -> list[float]:
     return model.encode(text).tolist()
 
 def update_documents_with_embeddings(database_name: str, collection_name: str):
-    load_dotenv()
+    load_dotenv() 
 
     DATABASE_LOGIN = os.getenv("DATABASE_LOGIN") #DATABASE_LOGIN is in the form username:password
 
