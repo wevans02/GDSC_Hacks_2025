@@ -37,13 +37,63 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        centerTitle: true,
-        title: const Text('Paralegal'),
+  backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+  toolbarHeight: 120,
+
+  // prevent Flutter from inserting a default back arrow
+  automaticallyImplyLeading: false,
+
+  // ---------- custom title row ----------
+  title: Row(
+    mainAxisSize: MainAxisSize.min,      // keep the row as tight as its children
+    children: [
+      // left logo
+      Image.asset(
+        'assets/Google_Gemini_logo.png',
+        height: 80,
+        fit: BoxFit.contain,
       ),
-      body: const Padding(
-        padding: EdgeInsets.all(50.0),
-        child: ChatWindow(),
+      const SizedBox(width: 50),         // space between logo & text
+
+      // title text
+      Transform.translate(
+        offset: const Offset(0, 12.5),   // negative dy moves up, positive moves down
+        child: const Text(
+          'Paralegal',
+          style: TextStyle(
+            fontSize: 75,
+            fontFamily: 'Montserrat',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      const SizedBox(width: 50),         // space between text & right logo
+
+      // right logo
+      Image.asset(
+        'assets/MongoDB_Logo.png',
+        height: 80,
+        fit: BoxFit.contain,
+      ),
+    ],
+  ),
+
+  // keep the title centred horizontally
+  centerTitle: true,
+),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 30),
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color.fromARGB(255, 197, 197, 197),  // optional background
+            border: Border.all(
+              color: const Color.fromARGB(255, 29, 29, 29), // border colour
+              width: 4,                    // border thickness
+            ),
+            borderRadius: BorderRadius.circular(12), // rounded corners
+          ),
+          child: const ChatWindow(), // your existing widget
+        ),
       ),
     );
   }
@@ -123,7 +173,7 @@ class _ChatWindowState extends State<ChatWindow> {
  // ───────────────────────── API helper ─────────────────────────
   /// Send `query` to the Flask API and return the reply text.
 Future<String> requestAPI(String query) async {
-  final uri = Uri.parse('http://10.12.215.197:5000/api/query'); // change for production
+  final uri = Uri.parse('http://10.12.208.160:5000/api/query'); // change for production
 
   try {
    
@@ -136,7 +186,7 @@ Future<String> requestAPI(String query) async {
       
     );
 
-    debugPrint("res $res");
+  
 
     
 
@@ -168,7 +218,7 @@ Future<String> requestAPI(String query) async {
               final align = m.fromMe ? Alignment.centerRight : Alignment.centerLeft;
               final bubble = m.fromMe
                   ? Theme.of(context).colorScheme.primaryContainer
-                  : Theme.of(context).colorScheme.primaryContainer;
+                  : const Color.fromARGB(255, 21, 98, 34);
               return Align(
                 alignment: align,
                 child: Container(
@@ -195,7 +245,7 @@ Future<String> requestAPI(String query) async {
                 controller: _input,
                 onSubmitted: (_) => _send(),
                 decoration: const InputDecoration(
-                  hintText: 'Type a message',
+                  hintText: 'Message Paralegal:',
                   hintStyle: TextStyle(color: Colors.black) ,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
