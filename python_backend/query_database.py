@@ -37,7 +37,7 @@ def query_database(query_text:str, database_name:str, collection_name:str):
         '_id': 0,  
         'title': 1, 
         'pdf': 1,
-        'pdf_content':1,
+        'pdf_content':1, 
         'score': {
           '$meta': 'vectorSearchScore'
         }

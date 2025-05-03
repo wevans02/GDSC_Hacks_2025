@@ -12,7 +12,7 @@ def generate(user_input:str,bylaws_data):
         api_key=os.environ.get("GEMINI_API_KEY"),
     )
 
-    model = "gemini-2.0-flash-lite"
+    model = "gemini-2.0-flash-lite" 
 
 
     # Initialize an empty string for the extra_info_text

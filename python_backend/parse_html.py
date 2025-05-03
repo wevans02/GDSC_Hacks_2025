@@ -25,7 +25,7 @@ def parse_html(file_name:str):
                 "title": title,
                 "pdf": link,
                 "pdf_content": ""
-            })
+            }) 
 
     # return the json list
     return bylaws
