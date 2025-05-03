@@ -47,7 +47,7 @@ def initalize_vector_index(database_name:str, collection_name:str):
   # Wait for initial sync to complete
   print("Polling to check if the index is ready. This may take up to a minute.")
   predicate=None
-  if predicate is None:
+  if predicate is None: 
     predicate = lambda index: index.get("queryable") is True
 
   while True:

@@ -44,8 +44,8 @@ def create_database(html_file_name:str, database_name:str, collection_name:str):
         for page in doc:
             full_text += page.get_text()
 
-        law["pdf"]  = full_text
-        doc.close()
+        law["pdf_content"]  = full_text
+        doc.close()  
     
 
     collection.insert_many(data)
