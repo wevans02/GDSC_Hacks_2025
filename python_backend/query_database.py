@@ -53,4 +53,9 @@ def query_database(query_text:str, database_name:str, collection_name:str):
   
   return result 
 
-query_database("can I park overnight on the street", "bylaws", "all_bylaws")
+result = query_database("can I park overnight on the street", "bylaws", "all_bylaws")
+
+
+import python_to_gemini
+
+python_to_gemini.generate("can I park overnight on the street",result)
