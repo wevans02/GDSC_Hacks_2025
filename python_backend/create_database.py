@@ -56,4 +56,4 @@ def create_database(html_file_name:str, database_name:str, collection_name:str):
 
     client.close()
 
-create_database("bylaws.html","bylaws","1-304")
+create_database("bylaws.html","bylaws","all_bylaws")
