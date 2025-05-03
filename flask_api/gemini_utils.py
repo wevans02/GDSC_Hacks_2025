@@ -5,9 +5,8 @@
 # genai.configure(api_key=os.environ["GEMINI_API_KEY"]) # Example setup
 
 def ask_gemini_with_context(context_chunks, user_query):
-    """Calls the Gemini API with retrieved context."""
     print(f"Mock asking Gemini about: '{user_query}'") # Keep using mocks for now
-    context_str = "\n---\n".join([f"Source: {chunk.get('bylaw_id', 'N/A')} - {chunk.get('section', 'N/A')}\n{chunk.get('text', '')}" for chunk in context_chunks])
+    context_str = "\n---\n".join([f"Source: {chunk.get('title', 'N/A')} - {chunk.get('section', 'N/A')}\n{chunk.get('text', '')}" for chunk in context_chunks])
     prompt = f"Context:\n{context_str}\n\nQuestion: {user_query}\n\nAnswer:"
     print(f"--- Mock Gemini Prompt ---\n{prompt}\n------------------------")
 

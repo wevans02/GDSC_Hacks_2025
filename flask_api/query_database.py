@@ -1,4 +1,4 @@
-import embed_vectors
+import embed_vectors as embed_vectors
 #for git
 from dotenv import load_dotenv
 import os
@@ -30,13 +30,14 @@ def query_database(query_text:str, database_name:str, collection_name:str):
         'path': 'plot_embedding', 
         'queryVector': query_vector,
         'numCandidates': 200, 
-        'limit': 5
+        'limit': 3
       }
     }, {
       '$project': {
         '_id': 0,  
         'title': 1, 
         'pdf': 1,
+        'pdf_content': 1,
         'score': {
           '$meta': 'vectorSearchScore'
         }
@@ -48,9 +49,8 @@ def query_database(query_text:str, database_name:str, collection_name:str):
   result = client[database_name][collection_name].aggregate(pipeline)
 
   # print results
-  for i in result:
-      print(i)
+  # for i in result:
+  #     print(i)
   
   return result 
 
-query_database("can I park overnight on the street", "bylaws", "all_bylaws")

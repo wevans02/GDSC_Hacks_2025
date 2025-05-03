@@ -3,8 +3,11 @@ from flask import Flask, jsonify, request
 
 # --- Import functions from your new utility files ---
 from gemini_utils import ask_gemini_with_context
-from rag_utils import get_embedding, find_relevant_bylaw_chunks
+from rag_utils import find_relevant_bylaw_chunks
+from embed_vectors import embed_text
+from query_database import query_database
 from flask_cors import CORS # Import CORS
+from python_to_gemini import generate_response
 
 # ----------------------------------------------------
 
@@ -41,16 +44,19 @@ def handle_query():
         return jsonify({"error": "Missing 'query' in JSON payload"}), 400
 
     try:
-        # 1. Get embedding (using imported function)
-        query_embedding = get_embedding(user_query)
-
+        
         # 2. Find relevant chunks (using imported function)
-        retrieved_chunks = find_relevant_bylaw_chunks(query_embedding)
+        # this automatically embeds query then searches
+        
+        retrieved_chunks = query_database(user_query, "bylaws", "all_bylaws")
+
+        print("retrieved chunks:", retrieved_chunks)
 
         # 3. Ask Gemini (using imported function)
         if retrieved_chunks:
-            gemini_answer = ask_gemini_with_context(retrieved_chunks, user_query)
-            sources = retrieved_chunks
+            gemini_answer = generate_response(user_query, retrieved_chunks)
+            #print(gemini_answer)
+            #sources = retrieved_chunks
         else:
             gemini_answer = "I could not find any relevant bylaw sections to answer your question."
             sources = []
@@ -58,7 +64,7 @@ def handle_query():
         # 4. Return response
         response_data = {
             "answer": gemini_answer,
-            "sources": sources
+            #"sources": sources
         }
         return jsonify(response_data)
 

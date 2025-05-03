@@ -1,6 +1,6 @@
 import parse_html
 import vector_index
-import embed_vectors
+import flask_api.embed_vectors as embed_vectors
 
 from dotenv import load_dotenv
 import os
