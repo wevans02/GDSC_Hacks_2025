@@ -1,5 +1,6 @@
 import parse_html
 import vector_index
+import embed_vectors
 
 from dotenv import load_dotenv
 import os
@@ -51,6 +52,8 @@ def create_database(html_file_name:str, database_name:str, collection_name:str):
 
     vector_index.initalize_vector_index(database_name, collection_name)
 
+    embed_vectors.update_documents_with_embeddings(database_name, collection_name)
+
     client.close()
 
-#create_database("bylaws.html","bylaws","1-304")
+create_database("bylaws.html","bylaws","1-304")
