@@ -20,10 +20,6 @@ def query_database(query_text:str, database_name:str, collection_name:str):
   #generate this vector using the query_text
   query_vector = []
 
-  #these are the current info i got but add more if there is more data
-  #By-law No.
-  #By-law Title
-
   # define pipeline
   pipeline = [
     {
@@ -37,8 +33,8 @@ def query_database(query_text:str, database_name:str, collection_name:str):
     }, {
       '$project': {
         '_id': 0, 
-        'By-law No.': 1, 
-        'By-law Title': 1, 
+        'title': 1, 
+        'pdf': 1, 
         'score': {
           '$meta': 'vectorSearchScore'
         }
