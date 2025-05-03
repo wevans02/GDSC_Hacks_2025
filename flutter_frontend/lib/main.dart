@@ -1,122 +1,219 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-void main() {
-  runApp(const MyApp());
-}
+void main() => runApp(const MyApp());
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      debugShowCheckedModeBanner: false,
+      title: 'Paralegal Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(
+        brightness: Brightness.dark,          // keeps the overall palette dark
+        seedColor: const Color.fromARGB(255, 34, 55, 82),   // dark navy‑charcoal hex
+        ),
+      scaffoldBackgroundColor: const Color.fromARGB(255, 217, 217, 217),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'Paralegal Demo Home Page'),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
   final String title;
-
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        centerTitle: true,
+        title: const Text('Paralegal'),
+      ),
+      body: const Padding(
+        padding: EdgeInsets.all(50.0),
+        child: ChatWindow(),
+      ),
+    );
+  }
+}
 
-  void _incrementCounter() {
+
+// -------------------- Chat message model --------------------
+class ChatMessage {
+  final String text;
+  final DateTime time;
+  final bool fromMe; // true = user, false = server
+  ChatMessage({required this.text, required this.time, required this.fromMe});
+}
+
+// ------------- Chat window with cooldown (no persistence) -------------
+class ChatWindow extends StatefulWidget {
+  const ChatWindow({super.key});
+  @override
+  State<ChatWindow> createState() => _ChatWindowState();
+}
+
+class _ChatWindowState extends State<ChatWindow> {
+  final _messages = <ChatMessage>[];
+  final _input = TextEditingController();
+  final _scroll = ScrollController();
+  bool _canSend = true;
+  static const _cooldown = Duration(seconds: 5);
+  String? _lastMessage; // stores most‑recent user text
+
+  /// Handles the user pressing *Send* or hitting *Enter*.
+  /// ------------------------------------------------------
+  ///                   Send Function
+  /// -----------------------------------------------------
+ // ---------------------------------------------------------------------
+  Future<void> _send() async {
+    // ─── 1.  Cool‑down guard ──────────────────────────────────────────
+    // If the timer hasn’t expired, ignore the tap/keypress.
+    if (!_canSend) return;
+
+    // ─── 2.  Grab & validate the input ────────────────────────────────
+    final text = _input.text.trim(); // remove leading/trailing spaces
+    if (text.isEmpty) return;        // don’t send blank messages
+
+    _lastMessage = text;             // store latest message
+
+    // ─── 3.  Add the user message & start cool‑down ──────────────────
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _messages.add(
+        ChatMessage(text: text, time: DateTime.now(), fromMe: true),
+      );
+      _canSend = false; // disable the send button for 3 seconds
+    });
+
+    _input.clear(); // ─── 4.  Clear the TextField for the next message ─
+
+    // ─── 5.  Query the API & append its reply to the chat ────────────────────────
+    final reply = await requestAPI(_lastMessage!);
+    setState(() {
+      _messages.add(
+        ChatMessage(text: reply, time: DateTime.now(), fromMe: false),
+      );
+    });
+
+    // ─── 6.  Re‑enable the send button after the cool‑down ────────────
+    Timer(_cooldown, () => setState(() => _canSend = true));
+
+    // ─── 7.  Auto‑scroll to the newest message *after* the frame draws ─
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scroll.animateTo(
+        _scroll.position.maxScrollExtent + 60, // a small bottom padding
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOut,
+      );
     });
   }
 
-  @override
+ // ───────────────────────── API helper ─────────────────────────
+  /// Send `query` to the Flask API and return the reply text.
+Future<String> requestAPI(String query) async {
+  final uri = Uri.parse('http://10.12.215.197:5000/api/query'); // change for production
+
+  try {
+   
+    // POST {"message": query}
+    final res = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+
+      body: jsonEncode({'query': query}),
+      
+    );
+
+    debugPrint("res $res");
+
+    
+
+    // Success → pull "reply" from JSON
+    if (res.statusCode == 200) {
+      return (jsonDecode(res.body) as Map<String, dynamic>)['answer'] as String;
+    }
+
+    // Non‑200 HTTP code
+    return '⚠️ Server ${res.statusCode}: ${res.reasonPhrase}';
+  } catch (e) {
+    // Network / parsing error
+    return '⚠️ Error: $e';
+  }
+}
+
+  // build the chat window
+  // ============================== UI ===============================
+   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            controller: _scroll,
+            itemCount: _messages.length,
+            itemBuilder: (context, i) {
+              final m = _messages[i];
+              final align = m.fromMe ? Alignment.centerRight : Alignment.centerLeft;
+              final bubble = m.fromMe
+                  ? Theme.of(context).colorScheme.primaryContainer
+                  : Theme.of(context).colorScheme.primaryContainer;
+              return Align(
+                alignment: align,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: bubble,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    m.text,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                style: TextStyle(color: Colors.black),
+                controller: _input,
+                onSubmitted: (_) => _send(),
+                decoration: const InputDecoration(
+                  hintText: 'Type a message',
+                  hintStyle: TextStyle(color: Colors.black) ,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+              ),
+            ),
+            IconButton(
+              icon: Icon(
+                _canSend ? Icons.send : Icons.hourglass_empty,
+                color: _canSend ? const Color(0xFF1D2939) : const Color(0xFFC0392B),
+              ),
+              onPressed: _canSend ? _send : null,
             ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      ],
     );
   }
 }

@@ -4,9 +4,24 @@ from flask import Flask, jsonify, request
 # --- Import functions from your new utility files ---
 from gemini_utils import ask_gemini_with_context
 from rag_utils import get_embedding, find_relevant_bylaw_chunks
+from flask_cors import CORS # Import CORS
+
 # ----------------------------------------------------
 
 app = Flask(__name__)
+#CORS(app) # Enable CORS for all routes and origins by default
+
+CORS(
+    app,
+    resources={r"/api/*": {"origins": "*"}},   # or your real origin
+    allow_headers=[
+        "Content-Type",        # JSON payload
+        "Authorization",       # Bearer / API key (if you send it)
+        "Accept",              # Flutter/axios often adds this
+        "X-Requested-With"     # common in some JS libs
+    ],
+    expose_headers=["Content-Length"]          # anything clients need to read
+)
 
 # (Remove the definitions of the functions you moved out)
 
