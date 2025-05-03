@@ -37,6 +37,7 @@ def query_database(query_text:str, database_name:str, collection_name:str):
         '_id': 0,  
         'title': 1, 
         'pdf': 1,
+        'pdf_content':1,
         'score': {
           '$meta': 'vectorSearchScore'
         }
@@ -50,9 +51,9 @@ def query_database(query_text:str, database_name:str, collection_name:str):
   
   return result 
 
-result = query_database("can i park on bartly drive?", "bylaws", "all_bylaws")
+# result = query_database("can i park on bartly drive?", "bylaws", "all_bylaws")
 
 
-import python_to_gemini
+# import python_to_gemini
 
-python_to_gemini.generate("can i park on bartly drive?",result)
+# python_to_gemini.generate("can i park on bartly drive?",result)
