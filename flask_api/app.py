@@ -2,12 +2,12 @@
 from flask import Flask, jsonify, request
 
 # --- Import functions from your new utility files ---
-from gemini_utils import ask_gemini_with_context
-from rag_utils import get_embedding, find_relevant_bylaw_chunks
+# from gemini_utils import ask_gemini_with_context
+# from rag_utils import get_embedding, find_relevant_bylaw_chunks
 from flask_cors import CORS # Import CORS
 
-from python_backend import query_database
-from python_backend import python_to_gemini
+import query_database
+import python_to_gemini
 
 # ----------------------------------------------------
 
@@ -43,9 +43,20 @@ def handle_query():
 
     result = query_database.query_database(user_query, "bylaws", "all_bylaws")
 
-    ai_responce = python_to_gemini.generate(user_query,result)
+    extra_info_text = ""
 
-    return [result, ai_responce]
+    # Loop through bylaws_data and concatenate all the information into extra_info_text
+    for i in result:
+        extra_info_text += "\n" + i["pdf"]  # Concatenate each item to the string
+
+    ai_response = python_to_gemini.generate(user_query,result)
+
+
+   
+    return jsonify({
+        'result': extra_info_text,
+        'ai_response': ai_response
+    })
 
 
 # --- Main execution block ---
