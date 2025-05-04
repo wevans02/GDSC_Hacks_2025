@@ -2,7 +2,7 @@ Flask
 Flask-Cors
 pymongo[srv] # Ensure [srv] is included for Atlas connection strings
 python-dotenv
-google-generativeai
+google-generativeai==0.8.5
 sentence-transformers
 requests
 PyMuPDF
