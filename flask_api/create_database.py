@@ -1,5 +1,5 @@
 import parse_html
-import vector_index
+# import vector_index
 import embed_vectors
 
 from dotenv import load_dotenv

@@ -20,7 +20,7 @@ def generate(user_input:str,bylaws_data):
 
     # Loop through bylaws_data and concatenate all the information into extra_info_text
     for i in bylaws_data:
-        extra_info_text += "\n" + i["pdf"]  # Concatenate each item to the string
+        extra_info_text += "\n" + i["pdf_content"]  # Concatenate each item to the string
 
     contents = [
         types.Content(
@@ -30,6 +30,9 @@ def generate(user_input:str,bylaws_data):
             ],
         ),
     ]
+
+    print("Stuff",extra_info_text)
+
     generate_content_config = types.GenerateContentConfig(
         response_mime_type="text/plain",
         temperature = 0,
@@ -45,6 +48,7 @@ def generate(user_input:str,bylaws_data):
     for chunk in client.models.generate_content_stream(
         model=model,
         contents=contents,
+        config=generate_content_config,
 
     ):
         print(chunk.text, end="")  # Print the generated chunk text
