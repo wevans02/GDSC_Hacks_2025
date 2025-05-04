@@ -47,11 +47,17 @@ def handle_query():
 
     # Loop through bylaws_data and concatenate all the information into extra_info_text
     for i in result:
-        extra_info_text += "\n" + i["pdf"]  # Concatenate each item to the string
+        extra_info_text += "\n" + i["pdf_content"]  # Concatenate each item to the string
 
-    ai_response = python_to_gemini.generate(user_query,result)
+    
+    ai_response = python_to_gemini.generate(user_query,extra_info_text)
+    extra_info_text = ""
+
+    for i in result:
+        extra_info_text += "\n" + i["pdf_content"]  # Concatenate each item to the string
 
 
+    print(extra_info_text)
    
     return jsonify({
         'result': extra_info_text,
