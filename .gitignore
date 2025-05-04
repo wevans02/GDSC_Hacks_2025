@@ -3,3 +3,4 @@ flask_api/__pycache__
 __pycache__/
 venv/
 *.pyc
+flask_api/venv/
