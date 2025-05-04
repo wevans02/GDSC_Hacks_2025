@@ -79,4 +79,5 @@ def handle_query():
 
 if __name__ == '__main__':
     # Make sure debug=False for production deployments
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    #app.run(host='0.0.0.0', port=5000, debug=False)
+    pass

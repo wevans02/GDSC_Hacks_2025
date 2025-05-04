@@ -1,0 +1,11 @@
+Flask
+Flask-Cors
+pymongo[srv] # Ensure [srv] is included for Atlas connection strings
+python-dotenv
+google-generativeai
+sentence-transformers
+requests
+PyMuPDF
+beautifulsoup4
+gunicorn # <-- Add this for the production server
+# Add any other specific versions if needed
