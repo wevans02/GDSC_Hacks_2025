@@ -1,123 +1,83 @@
-# # app.py
-# from flask import Flask, jsonify, request
+# app.py
+from flask import Flask, jsonify, request
 
-# # --- Import functions from your new utility files ---
-# # from gemini_utils import ask_gemini_with_context
-# # from rag_utils import get_embedding, find_relevant_bylaw_chunks
-# from flask_cors import CORS # Import CORS
+# --- Import functions from your new utility files ---
+# from gemini_utils import ask_gemini_with_context
+# from rag_utils import get_embedding, find_relevant_bylaw_chunks
+from flask_cors import CORS # Import CORS
 
-# import query_database
-# import python_to_gemini
-# # app.py modifications
+import query_database
+import python_to_gemini
+# app.py modifications
 
-# from flask import Flask, jsonify, request
-# from flask_cors import CORS
-# import query_database
-# import python_to_gemini
-# # ... (other potential imports) ...
-
-# app = Flask(__name__)
-# CORS(app, resources={r"/api/*": {"origins": "*"}}) # Simplified CORS setup
-
-# # --- API ENDPOINT ---
-# @app.route('/api/query', methods=['POST'])
-# def handle_query():
-#     print(f"Received request at /api/query ({request.method})")
-
-#     if not request.is_json:
-#         return jsonify({"error": "Request must be JSON"}), 400
-
-#     data = request.get_json()
-#     user_query = data.get('query')
-
-#     if not user_query:
-#         return jsonify({"error": "Missing 'query' in request body"}), 400
-
-#     # ---- Query the NEW collection ----
-#     database_name = "bylaws"
-#     collection_name = "bylaw_chunks" # Use the new chunk collection
-#     print(f"Querying {database_name}.{collection_name} for: '{user_query}'")
-#     results = query_database.query_database(user_query, database_name, collection_name)
-#     # --------------------------------
-
-#     # ---- Prepare context from CHUNKS ----
-#     context_text = ""
-#     source_info = [] # Optional: Track sources
-#     if results:
-#         print(f"Retrieved {len(results)} relevant chunks.")
-#         # Concatenate the text of the retrieved chunks
-#         context_text = "\n\n---\n\n".join([chunk.get('chunk_text', '') for chunk in results if chunk.get('chunk_text')])
-
-#         # Optional: Prepare source info for display or logging
-#         source_info = [
-#             {
-#                 "title": chunk.get("title"),
-#                 "bylaw_id": chunk.get("original_bylaw_id"),
-#                 "pdf_url": chunk.get("pdf_url"),
-#                 "chunk": chunk.get("chunk_sequence"),
-#                 "score": chunk.get("score")
-#             } for chunk in results
-#         ]
-#     else:
-#         print("No relevant chunks found.")
-#     # -----------------------------------
-
-#     # ---- Call Gemini with CHUNK context ----
-#     print("Sending query and context to Gemini...")
-#     # Ensure python_to_gemini.generate can handle potentially empty context_text
-#     ai_response = python_to_gemini.generate(user_query, context_text if context_text else "No relevant information found in bylaws.")
-#     print("Received response from Gemini.")
-#     # --------------------------------------
-
-#     # ---- Return AI response and optionally source info ----
-#     return jsonify({
-#         'ai_response': ai_response,
-#         'retrieved_sources': source_info # Optional: send sources back to frontend
-#         # 'result': context_text # Probably don't send the raw context back
-#     })
-#     # -----------------------------------------------------
-
-# if __name__ == '__main__':
-#     # Make sure debug=False for production deployments
-#     #app.run(host='0.0.0.0', port=5000, debug=False)
-#     app.run()
-
-# Temporary app.py for testing import
-from flask import Flask
-import os
-from dotenv import load_dotenv
-
-print("--- Starting temporary app.py ---")
-
-# Try the import immediately
-try:
-    print("Attempting: from google import genai")
-    from google import genai
-    print("SUCCESS: Imported google.genai")
-    # You could even try accessing something simple:
-    # print(f"Genai object type: {type(genai)}")
-except ImportError as e:
-    print(f"IMPORT ERROR: {e}")
-    # Optional: re-raise to ensure the crash is obvious in logs
-    raise e
-except Exception as e:
-    print(f"OTHER EXCEPTION during import: {e}")
-    raise e
-
-# Load environment variables (might be needed by genai library internally later)
-# load_dotenv() # Comment out if you are sure genai doesn't need env vars right at import
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+import query_database
+import python_to_gemini
+# ... (other potential imports) ...
 
 app = Flask(__name__)
+CORS(app, resources={r"/api/*": {"origins": "*"}}) # Simplified CORS setup
 
-@app.route('/')
-def hello():
-    # Check if the import actually worked and the name is available
-    if 'genai' in globals():
-        print("Check route: 'genai' is in globals.")
-        return "Flask app started - genai WAS imported."
+# --- API ENDPOINT ---
+@app.route('/api/query', methods=['POST'])
+def handle_query():
+    print(f"Received request at /api/query ({request.method})")
+
+    if not request.is_json:
+        return jsonify({"error": "Request must be JSON"}), 400
+
+    data = request.get_json()
+    user_query = data.get('query')
+
+    if not user_query:
+        return jsonify({"error": "Missing 'query' in request body"}), 400
+
+    # ---- Query the NEW collection ----
+    database_name = "bylaws"
+    collection_name = "bylaw_chunks" # Use the new chunk collection
+    print(f"Querying {database_name}.{collection_name} for: '{user_query}'")
+    results = query_database.query_database(user_query, database_name, collection_name)
+    # --------------------------------
+
+    # ---- Prepare context from CHUNKS ----
+    context_text = ""
+    source_info = [] # Optional: Track sources
+    if results:
+        print(f"Retrieved {len(results)} relevant chunks.")
+        # Concatenate the text of the retrieved chunks
+        context_text = "\n\n---\n\n".join([chunk.get('chunk_text', '') for chunk in results if chunk.get('chunk_text')])
+
+        # Optional: Prepare source info for display or logging
+        source_info = [
+            {
+                "title": chunk.get("title"),
+                "bylaw_id": chunk.get("original_bylaw_id"),
+                "pdf_url": chunk.get("pdf_url"),
+                "chunk": chunk.get("chunk_sequence"),
+                "score": chunk.get("score")
+            } for chunk in results
+        ]
     else:
-        print("Check route: 'genai' is NOT in globals.")
-        return "Flask app started - genai import FAILED."
+        print("No relevant chunks found.")
+    # -----------------------------------
 
-print("--- Finished temporary app.py setup ---")
-# No app.run() needed for Gunicorn
+    # ---- Call Gemini with CHUNK context ----
+    print("Sending query and context to Gemini...")
+    # Ensure python_to_gemini.generate can handle potentially empty context_text
+    ai_response = python_to_gemini.generate(user_query, context_text if context_text else "No relevant information found in bylaws.")
+    print("Received response from Gemini.")
+    # --------------------------------------
+
+    # ---- Return AI response and optionally source info ----
+    return jsonify({
+        'ai_response': ai_response,
+        'retrieved_sources': source_info # Optional: send sources back to frontend
+        # 'result': context_text # Probably don't send the raw context back
+    })
+    # -----------------------------------------------------
+
+if __name__ == '__main__':
+    # Make sure debug=False for production deployments
+    #app.run(host='0.0.0.0', port=5000, debug=False)
+    pass
