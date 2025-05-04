@@ -6,6 +6,7 @@ from gemini_utils import ask_gemini_with_context
 from rag_utils import get_embedding, find_relevant_bylaw_chunks
 from flask_cors import CORS # Import CORS
 
+
 # ----------------------------------------------------
 
 app = Flask(__name__)
