@@ -40,7 +40,7 @@ def generate(user_input:str,bylaws_data):
     )
 
 
-
+    output = ""
     # Generate content using the model
     for chunk in client.models.generate_content_stream(
         model=model,
@@ -48,5 +48,8 @@ def generate(user_input:str,bylaws_data):
 
     ):
         print(chunk.text, end="")  # Print the generated chunk text
+        output += chunk.text
+
+    return output
 
 
