@@ -15,9 +15,11 @@ from flask_cors import CORS
 import query_database
 import python_to_gemini
 # ... (other potential imports) ...
+frontend_url = "https://gdsc-2025.web.app"
+
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}}) # Simplified CORS setup
+CORS(app, resources={r"/api/*": {"origins": [frontend_url]}}) # Simplified CORS setup
 
 # --- API ENDPOINT ---
 @app.route('/api/query', methods=['POST'])
