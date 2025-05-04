@@ -35,7 +35,7 @@ def generate(user_input:str,bylaws_data:str):
 
     generate_content_config = types.GenerateContentConfig(
         response_mime_type="text/plain",
-        temperature = 0,
+        temperature = 0.5,
         top_p= 0.95,
         top_k=40,
         max_output_tokens= 8192,
