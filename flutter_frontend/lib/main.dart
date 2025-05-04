@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 void main() => runApp(const MyApp());
 
@@ -222,16 +223,25 @@ Future<String> requestAPI(String query) async {
                   : const Color.fromARGB(255, 21, 98, 34);
               return Align(
                 alignment: align,
-                child: Container(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: bubble,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    m.text,
-                    style: const TextStyle(color: Colors.white),
+                child: Padding(
+                  padding: EdgeInsets.only(
+                      left: m.fromMe ? 64.0 : 8.0,
+                      right: m.fromMe ? 8.0 : 64.0
+                    ),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: bubble,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Markdown(
+                      shrinkWrap: true,
+                      data: m.text,
+                      selectable: true,
+                      
+                      //style: const TextStyle(color: Colors.white),
+                    ),
                   ),
                 ),
               );
