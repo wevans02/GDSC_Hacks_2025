@@ -45,7 +45,7 @@ def handle_query():
 
     ai_responce = python_to_gemini.generate(user_query,result)
 
-    return [result, ai_responce]
+    return {"data":result, "responce":ai_responce}
 
 
 # --- Main execution block ---
