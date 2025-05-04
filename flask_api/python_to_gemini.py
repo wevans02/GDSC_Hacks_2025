@@ -12,7 +12,7 @@ def generate(user_input:str,bylaws_data:str):
         api_key=os.environ.get("GEMINI_API_KEY"),
     )
 
-    model = "gemini-2.0-flash-lite" 
+    model = "gemini-2.0-flash" 
 
 
     # Initialize an empty string for the extra_info_text
@@ -26,7 +26,12 @@ def generate(user_input:str,bylaws_data:str):
         types.Content(
             role="user",
             parts=[
-                types.Part.from_text(text=f"Based on the following bylaw sections: {bylaws_data}. User Question: {user_input}. Please answer the user's question using the information provided in the bylaw sections above. If the information is not present in the provided sections, please try to extrapolated. Be concise and specific."), 
+                types.Part.from_text(text=f"""Based on the following bylaw sections: {bylaws_data}. 
+                                    User Question: {user_input}. 
+                                    Please carefully consider the bylaw sections and answer the user question using specific and precise information from the bylaw sections. 
+                                    If you can not answer the users question directly, please provide related information to their question. 
+                                    If you truly cannot answer at all using the bylaw data provided, briefly state to the user the information that you do have and that you cannot answer their question.
+                                     """), 
             ],
         ),
     ]
