@@ -8,6 +8,8 @@ prompt:str, bylaws_list: list###
 '''
 def generate(user_input:str,bylaws_data:str):
     load_dotenv()
+    port = int(os.environ.get("PORT", 5000))  # default to 5000 if PORT is not set
+    app.run(host="0.0.0.0", port=port)
     client = genai.Client(
         api_key=os.environ.get("GEMINI_API_KEY"),
     )
