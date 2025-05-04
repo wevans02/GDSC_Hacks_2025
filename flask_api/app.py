@@ -17,6 +17,8 @@ import python_to_gemini
 # ... (other potential imports) ...
 frontend_url = "https://gdsc-2025.web.app"
 
+port = int(os.environ.get("PORT", 5000))  # default to 5000 if PORT is not set
+app.run(host="0.0.0.0", port=port)
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": [frontend_url]}}) # Simplified CORS setup
