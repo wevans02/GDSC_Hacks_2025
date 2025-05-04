@@ -6,6 +6,8 @@ from gemini_utils import ask_gemini_with_context
 from rag_utils import get_embedding, find_relevant_bylaw_chunks
 from flask_cors import CORS # Import CORS
 
+from python_backend import query_database
+from python_backend import python_to_gemini
 
 # ----------------------------------------------------
 
@@ -32,40 +34,19 @@ def handle_query():
     """Receives user query, performs mock RAG, returns answer and sources."""
     print(f"Received request at /api/query ({request.method})")
 
+
     if not request.is_json:
         return jsonify({"error": "Request must be JSON"}), 400
 
     data = request.get_json()
     user_query = data.get('query')
 
-    if not user_query:
-        return jsonify({"error": "Missing 'query' in JSON payload"}), 400
+    result = query_database.query_database(user_query, "bylaws", "all_bylaws")
 
-    try:
-        # 1. Get embedding (using imported function)
-        query_embedding = get_embedding(user_query)
+    ai_responce = python_to_gemini.generate(user_query,result)
 
-        # 2. Find relevant chunks (using imported function)
-        retrieved_chunks = find_relevant_bylaw_chunks(query_embedding)
+    return [result, ai_responce]
 
-        # 3. Ask Gemini (using imported function)
-        if retrieved_chunks:
-            gemini_answer = ask_gemini_with_context(retrieved_chunks, user_query)
-            sources = retrieved_chunks
-        else:
-            gemini_answer = "I could not find any relevant bylaw sections to answer your question."
-            sources = []
-
-        # 4. Return response
-        response_data = {
-            "answer": gemini_answer,
-            "sources": sources
-        }
-        return jsonify(response_data)
-
-    except Exception as e:
-        print(f"Error processing query: {e}")
-        return jsonify({"error": "An internal error occurred."}), 500
 
 # --- Main execution block ---
 if __name__ == '__main__':
