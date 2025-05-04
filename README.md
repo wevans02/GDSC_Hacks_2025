@@ -40,32 +40,32 @@ This project provides a web interface to query and understand Toronto Municipal 
 
 ## 📁 Project Structure
 
-GDSC_Hacks_2025/
-├── flask_api/ # Backend Flask application
-│ ├── templates/ # (If any Flask templates exist)
-│ ├── static/ # (If any static files exist)
-│ ├── venv/ # Python virtual environment
-│ ├── .env # Environment variables (DO NOT COMMIT)
-│ ├── requirements.txt # Python dependencies
-│ ├── app.py # Main Flask app
-│ ├── create_database.py
-│ ├── embed_vectors.py
-│ ├── parse_html.py
-│ ├── query_database.py
-│ ├── python_to_gemini.py
-│ ├── chunk_text.py
-│ ├── lawmcode.htm # Source HTML file (manual download)
-│ └── ...
-│
-├── flutter_frontend/ # Frontend Flutter app
-│ ├── lib/
-│ │ └── main.dart
-│ ├── assets/
-│ ├── web/
-│ ├── pubspec.yaml
-│ └── ...
-│
-└── README.md # This file
+GDSC_Hacks_2025/\
+├── flask_api/ # Backend Flask application\
+│ ├── templates/ # (If any Flask templates exist)\
+│ ├── static/ # (If any static files exist)\
+│ ├── venv/ # Python virtual environment\
+│ ├── .env # Environment variables (DO NOT COMMIT)\
+│ ├── requirements.txt # Python dependencies\
+│ ├── app.py # Main Flask app\
+│ ├── create_database.py\
+│ ├── embed_vectors.py\
+│ ├── parse_html.py\
+│ ├── query_database.py\
+│ ├── python_to_gemini.py\
+│ ├── chunk_text.py\
+│ ├── lawmcode.htm # Source HTML file (manual download)\
+│ └── ...\
+│\
+├── flutter_frontend/ # Frontend Flutter app\
+│ ├── lib/\
+│ │ └── main.dart\
+│ ├── assets/\
+│ ├── web/\
+│ ├── pubspec.yaml\
+│ └── ...\
+│\
+└── README.md # This file\
 
 
 ## ⚙️ Setup Instructions
@@ -98,6 +98,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 🧾 Download Bylaw Source HTML
 Go to: https://www.toronto.ca/legdocs/municode/toronto-code-chapters.shtml
+```
 
 Save the HTML content as lawmcode.htm in the flask_api folder.
 
