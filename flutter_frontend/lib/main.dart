@@ -173,7 +173,7 @@ class _ChatWindowState extends State<ChatWindow> {
  // ───────────────────────── API helper ─────────────────────────
   /// Send `query` to the Flask API and return the reply text.
 Future<String> requestAPI(String query) async {
-  final uri = Uri.parse('http://10.12.208.160:5000/api/query'); // change for production
+  final uri = Uri.parse('http://10.12.168.45:5000/api/query'); // change for production
 
   try {
    
@@ -192,7 +192,7 @@ Future<String> requestAPI(String query) async {
 
     // Success → pull "reply" from JSON
     if (res.statusCode == 200) {
-      return (jsonDecode(res.body) as Map<String, dynamic>)['answer'] as String;
+      return (jsonDecode(res.body) as Map<String, dynamic>)['ai_response'] as String;
     }
 
     // Non‑200 HTTP code
