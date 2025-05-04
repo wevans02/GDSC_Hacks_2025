@@ -45,15 +45,16 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // ---------- custom title row ----------
   title: Row(
-    mainAxisSize: MainAxisSize.min,      // keep the row as tight as its children
+    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    mainAxisSize: MainAxisSize.max,      // keep the row as tight as its children
     children: [
       // left logo
       Image.asset(
         'assets/Google_Gemini_logo.png',
-        height: 80,
+        height: 40,
         fit: BoxFit.contain,
       ),
-      const SizedBox(width: 50),         // space between logo & text
+      // const SizedBox(width: 50),         // space between logo & text
 
       // title text
       Transform.translate(
@@ -67,12 +68,12 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ),
       ),
-      const SizedBox(width: 50),         // space between text & right logo
+      // const SizedBox(width: 50),         // space between text & right logo
 
       // right logo
       Image.asset(
         'assets/MongoDB_Logo.png',
-        height: 80,
+        height: 40,
         fit: BoxFit.contain,
       ),
     ],
@@ -173,7 +174,7 @@ class _ChatWindowState extends State<ChatWindow> {
  // ───────────────────────── API helper ─────────────────────────
   /// Send `query` to the Flask API and return the reply text.
 Future<String> requestAPI(String query) async {
-  final uri = Uri.parse('http://10.12.168.45:5000/api/query'); // change for production
+  final uri = Uri.parse('http://10.12.165.139:5000/api/query'); // change for production
 
   try {
    
@@ -237,31 +238,34 @@ Future<String> requestAPI(String query) async {
             },
           ),
         ),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                style: TextStyle(color: Colors.black),
-                controller: _input,
-                onSubmitted: (_) => _send(),
-                decoration: const InputDecoration(
-                  hintText: 'Message Paralegal:',
-                  hintStyle: TextStyle(color: Colors.black) ,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+          child: Row(
+            children:[
+              Expanded(
+                child: TextField(
+                  style: TextStyle(color: Colors.black),
+                  controller: _input,
+                  onSubmitted: (_) => _send(),
+                  decoration: const InputDecoration(
+                    hintText: 'Message Paralegal:',
+                    hintStyle: TextStyle(color: Colors.black) ,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
               ),
-            ),
-            IconButton(
-              icon: Icon(
-                _canSend ? Icons.send : Icons.hourglass_empty,
-                color: _canSend ? const Color(0xFF1D2939) : const Color(0xFFC0392B),
+              IconButton(
+                icon: Icon(
+                  _canSend ? Icons.send : Icons.hourglass_empty,
+                  color: _canSend ? const Color(0xFF1D2939) : const Color(0xFFC0392B),
+                ),
+                onPressed: _canSend ? _send : null,
               ),
-              onPressed: _canSend ? _send : null,
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
