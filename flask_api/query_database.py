@@ -35,7 +35,7 @@ def query_database(query_text: str, database_name: str, collection_name: str): #
                 'path': embedding_path,
                 'queryVector': query_vector,
                 'numCandidates': 200, # Adjust as needed
-                'limit': 10 # Adjust as needed - number of chunks to return
+                'limit': 7 # Adjust as needed - number of chunks to return
             }
         }, {
             '$project': {
