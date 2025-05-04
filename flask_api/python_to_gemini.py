@@ -31,6 +31,7 @@ def generate(user_input:str,bylaws_data:str):
                                     Please carefully consider the bylaw sections and answer the user question using specific and precise information from the bylaw sections. 
                                     If you can not answer the users question directly, please provide related information to their question. 
                                     If you truly cannot answer at all using the bylaw data provided, briefly state to the user the information that you do have and that you cannot answer their question.
+                                    Note that some of the data mauy be cut off at the start or at the end. when giving a response, please try to use full words, and 'fix' any cutoff words so that the response is easy to understand by the user.
                                      """), 
             ],
         ),
