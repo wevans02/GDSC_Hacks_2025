@@ -17,7 +17,6 @@ import python_to_gemini
 # ... (other potential imports) ...
 frontend_url = "https://gdsc-2025.web.app"
 
-
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": [frontend_url]}}) # Simplified CORS setup
 
@@ -79,7 +78,7 @@ def handle_query():
     })
     # -----------------------------------------------------
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
     # Make sure debug=False for production deployments
-    app.run(host='0.0.0.0', port=5000, debug=False)
-#     pass
+    # app.run(host='0.0.0.0', port=5000, debug=False)
+    # pass
