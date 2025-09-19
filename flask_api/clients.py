@@ -22,7 +22,7 @@ def get_mongo_client():
     if _mongo_client is None:
         print(f"Process {os.getpid()}: Initializing MongoDB client for the first time...")
         DATABASE_LOGIN = os.getenv("DATABASE_LOGIN")
-        print("logging in with:", DATABASE_LOGIN)
+        # print("logging in with:", DATABASE_LOGIN)
         uri = f"mongodb+srv://{DATABASE_LOGIN}@gdsc2025.cn3wt5n.mongodb.net/?retryWrites=true&w=majority&appName=GDSC2025"
         try:
             _mongo_client = pymongo.MongoClient(uri, tls=True, tlsAllowInvalidCertificates=False)

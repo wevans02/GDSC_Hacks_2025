@@ -45,7 +45,7 @@ def generate(user_input:str, bylaws_data:str):
 
     output = ""
     for chunk in gemini_client.models.generate_content_stream(
-        model="gemini-2.5-flash",
+        model="gemini-2.5-flash-lite",
         contents=contents,
         config=generate_content_config,
     ):
