@@ -488,7 +488,7 @@ class _ChatWindowState extends State<ChatWindow> {
   Future<Map<String, dynamic>> requestAPI(String query) async {
       // final uri = Uri.parse('http://172.20.10.2:5000/api/query'); // Use your correct IP
       // final uri = Uri.parse('http://127.0.0.1:5000/api/query'); // Common localhost IP
-      final uri = Uri.parse('https://19f4-23-248-65-19.ngrok-free.app/api/query'); // <<<--- IMPORTANT: Update this IP/domain
+      final uri = Uri.parse('https://paralegalbylaw.org/api/query');
 
       try {
         final res = await http.post(
@@ -517,9 +517,9 @@ class _ChatWindowState extends State<ChatWindow> {
           };
         }
       } catch (e) {
-        print('Network/Request Error: $e'); // Log error
+        print('Network/Request Error, sorry :/'); // Log error
         return {
-          'ai_response': '⚠️ Network Error. Could not connect to the server. Please check your connection ($uri) or ensure the server is running.',
+          'ai_response': '⚠️ Network Error. Could not connect to the server. Please check your connection or ensure the server is running.',
           'retrieved_sources': <Map<String, dynamic>>[],
         };
       }
