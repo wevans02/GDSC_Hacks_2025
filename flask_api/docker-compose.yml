@@ -1,0 +1,31 @@
+# file: docker-compose.yml
+
+version: '3.8' # Specifies the docker-compose version
+
+# Define the services (containers) that make up your application
+services:
+  # 1. Your Flask API service
+  api:
+    build: . # Build the image from the Dockerfile in the current directory
+    container_name: bylaw-rag-api
+    restart: always # Always restart the container if it stops
+    env_file:
+      - .env # Load environment variables from the .env file
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0' # Limit to 2 CPU cores
+          memory: '4G' # Limit to 4GB of RAM
+    # Note: We don't need to expose ports to the host PC anymore,
+    # because the cloudflared service will access it directly.
+
+  # 2. The Cloudflare Tunnel service
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflare-tunnel
+    restart: always
+    command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
+    depends_on:
+      - api
+    volumes:
+      - ./cloudflared:/etc/cloudflared # map local folder with credentials and config
