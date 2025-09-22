@@ -488,7 +488,7 @@ class _ChatWindowState extends State<ChatWindow> {
   Future<Map<String, dynamic>> requestAPI(String query) async {
       // final uri = Uri.parse('http://172.20.10.2:5000/api/query'); // Use your correct IP
       // final uri = Uri.parse('http://127.0.0.1:5000/api/query'); // Common localhost IP
-      final uri = Uri.parse('https://paralegalbylaw.org/api/query');
+      final uri = Uri.parse('https://api.paralegalbylaw.org/api/query');
 
       try {
         final res = await http.post(
