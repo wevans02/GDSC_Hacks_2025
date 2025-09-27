@@ -14,6 +14,11 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import query_database
 import python_to_gemini
+
+import os, smtplib
+from email.mime.text import MIMEText
+
+
 # ... (other potential imports) ...
 allowed_urls = [
     "https://gdsc-2025.firebaseapp.com",
@@ -26,6 +31,87 @@ load_dotenv()
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": allowed_urls}}) # Simplified CORS setup
+
+import datetime
+
+def send_email(subject, body):
+    """Try to send an email. Fallback to writing into a log file."""
+    from_addr = os.getenv("SMTP_USER")
+    to_addr = os.getenv("FEEDBACK_EMAIL", from_addr)
+    password = os.getenv("SMTP_PASS")
+    smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+    smtp_port = int(os.getenv("SMTP_PORT", 587))
+
+    if not (from_addr and password and to_addr):
+        print("⚠️ Email not configured, logging to file instead.")
+        _write_to_file(subject, body)
+        return False
+
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = from_addr
+    msg["To"] = to_addr
+
+    try:
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(from_addr, password)
+            server.sendmail(from_addr, [to_addr], msg.as_string())
+        print(f"✅ Sent email: {subject}")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to send email: {e}, logging to file instead.")
+        _write_to_file(subject, body)
+        return False
+
+
+def _write_to_file(subject, body):
+    """Fallback: save submissions into a log file inside the container."""
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_entry = f"[{timestamp}] {subject}\n{body}\n{'-'*40}\n"
+    try:
+        with open("submissions.log", "a", encoding="utf-8") as f:
+            f.write(log_entry)
+        print("📝 Saved submission to submissions.log")
+    except Exception as e:
+        print(f"❌ Failed to write to log file: {e}")
+
+
+# --- Request a City ---
+@app.route("/api/request-city", methods=["POST"])
+def request_city():
+    data = request.get_json()
+    city = data.get("city")
+    email = data.get("email")
+    notes = data.get("notes")
+
+    print("RECIEVED CITY REQ")
+
+    if not city:
+        return jsonify({"error": "City is required"}), 400
+
+    body = f"City request:\n\nCity: {city}\nEmail: {email or 'N/A'}\nNotes: {notes or 'N/A'}"
+    sent = send_email("New City Request", body)
+
+    return jsonify({"status": "ok", "emailed": sent})
+
+# --- Feedback ---
+@app.route("/api/feedback", methods=["POST"])
+def feedback():
+    data = request.get_json()
+    feedback_text = data.get("feedback")
+    email = data.get("email")
+
+    print("RECIEVED FEEDBACK REQ")
+
+
+    if not feedback_text:
+        return jsonify({"error": "Feedback is required"}), 400
+
+    body = f"Feedback:\n\n{feedback_text}\n\nFrom: {email or 'Anonymous'}"
+    sent = send_email("New Feedback", body)
+
+    return jsonify({"status": "ok", "emailed": sent})
 
 # --- API ENDPOINT ---
 @app.route('/api/query', methods=['POST'])

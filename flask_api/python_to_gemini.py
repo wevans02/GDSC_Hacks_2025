@@ -22,13 +22,23 @@ def generate(user_input:str, bylaws_data:str):
         types.Content(
             role="user",
             parts=[
-                types.Part.from_text(text=f"""Based on the following bylaw sections: {bylaws_data}. 
-                                    User Question: {user_input}. 
-                                    Please carefully consider the bylaw sections and answer the user question using specific and precise information from the bylaw sections. 
-                                    If you can not answer the users question directly, please provide related information to their question. 
-                                    If you truly cannot answer at all using the bylaw data provided, briefly state to the user the information that you do have and that you cannot answer their question.
-                                    Note that some of the data mauy be cut off at the start or at the end. when giving a response, please try to use full words, and 'fix' any cutoff words so that the response is easy to understand by the user.
-                                     """), 
+                types.Part.from_text(text=f"""
+                    You are Paralegal, a conversational chatbot as part of a RAG pipeline about torontos bylaws.
+                                     
+                    You are given the following bylaw sections:
+                    {bylaws_data}
+
+                    User Question:
+                    {user_input}
+
+                    Instructions:
+                    1. Answer the question using **specific and precise details** from the bylaw sections.
+                    2. If the bylaws do not directly answer, provide the most relevant related information you can find in them.
+                    3. If you cannot answer at all from the given data, clearly state what information you do have and explain that the question cannot be fully answered.
+                    4. Some bylaw text may be **cut off at the start or end**. When responding, reconstruct cutoff words into full words so the answer reads naturally and is easy for the user to understand.
+                    5. Always prefer clarity and accuracy over speculation.
+                    6. Be concise in your answers.
+                    """), 
             ],
         ),
     ]
