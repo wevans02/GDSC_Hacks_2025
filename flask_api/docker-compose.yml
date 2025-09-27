@@ -1,6 +1,6 @@
 # file: docker-compose.yml
 
-version: '3.8' # Specifies the docker-compose version
+# version: '3.8' # Specifies the docker-compose version
 
 # Define the services (containers) that make up your application
 services:
