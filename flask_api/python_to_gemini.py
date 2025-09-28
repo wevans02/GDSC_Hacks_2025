@@ -28,16 +28,17 @@ You are given the following bylaw sections:
 User Question:
 {user_input}
 
-Context:
+Conversation History (chronological order, older first, newer later):
 {context}
 
 Instructions:
-1. Answer the question using **specific and precise details** from the bylaw sections.
+1. Answer the question using **specific and precise details** from the bylaw sections when relevant.
 2. If the bylaws do not directly answer, provide the most relevant related information you can find in them.
-3. If you cannot answer at all from the given data, clearly state what information you do have and explain that the question cannot be fully answered.
-4. Some bylaw text may be **cut off at the start or end**. When responding, reconstruct cutoff words into full words so the answer reads naturally and is easy for the user to understand.
-5. Always prefer clarity and accuracy over speculation.
-6. Be concise in your answers.
+3. If the user refers to previous questions or context, summarize them based on the Conversation History.
+4. If you cannot answer at all from the given data, clearly state what information you do have and explain that the question cannot be fully answered.
+5. Some bylaw text may be **cut off at the start or end**. When responding, reconstruct cutoff words into full words so the answer reads naturally and is easy for the user to understand.
+6. Always prefer clarity and accuracy over speculation.
+7. Be concise in your answers.
 """
     print("PROMPT: ", prompt)
     contents = [
