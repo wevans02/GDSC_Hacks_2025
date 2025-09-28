@@ -20,12 +20,7 @@ def generate(user_input: str, bylaws_data: str, city: str = None, context: str =
     city = str(city or "Unknown City")
     context = str(context or "No prior conversation context.")
 
-    contents = [
-        types.Content(
-            role="user",
-            parts=[
-                types.Part.from_text(text=f"""
-You are Paralegal, a conversational chatbot as part of a RAG pipeline about {city}'s bylaws.
+    prompt = f"""You are Paralegal, a conversational chatbot as part of a RAG pipeline about {city}'s bylaws.
 
 You are given the following bylaw sections:
 {bylaws_data}
@@ -43,7 +38,13 @@ Instructions:
 4. Some bylaw text may be **cut off at the start or end**. When responding, reconstruct cutoff words into full words so the answer reads naturally and is easy for the user to understand.
 5. Always prefer clarity and accuracy over speculation.
 6. Be concise in your answers.
-                """),
+"""
+    print("PROMPT: ", prompt)
+    contents = [
+        types.Content(
+            role="user",
+            parts=[
+                types.Part.from_text(text=prompt),
             ],
         ),
     ]
