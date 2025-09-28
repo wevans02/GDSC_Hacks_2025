@@ -17,7 +17,7 @@ class InfoSection extends StatelessWidget {
           const SizedBox(height: 24),
           
           // Feature cards
-          _buildFeatureCards(),
+          _buildFeatureCards(context),
           const SizedBox(height: 20),
           
           // Trust indicators
@@ -82,7 +82,7 @@ class InfoSection extends StatelessWidget {
     );
   }
 
-  Widget _buildFeatureCards() {
+  Widget _buildFeatureCards(BuildContext context) {
     final features = [
       {
         'icon': Icons.library_books_outlined,
@@ -101,20 +101,18 @@ class InfoSection extends StatelessWidget {
       },
     ];
 
-    return Row(
-      children: features.map((feature) {
-        return Expanded(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4),
+    // adjustable cutoff for when to switch layout
+    const cutoff = 600.0; 
+
+    final isNarrow = MediaQuery.of(context).size.width < cutoff;
+
+    if (isNarrow) {
+      // Column layout for phones
+      return Column(
+        children: features.map((feature) {
+          return Container(
+            margin: const EdgeInsets.symmetric(vertical: 8),
             padding: const EdgeInsets.all(24),
-            // decoration: BoxDecoration(
-              //color: Colors.white.withOpacity(0.05),
-              // borderRadius: BorderRadius.circular(12),
-              // border: Border.all(
-              //   color: Colors.white.withOpacity(0.1),
-              //   width: 1,
-              // ),
-            // ),
             child: Column(
               children: [
                 Icon(
@@ -125,7 +123,7 @@ class InfoSection extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   feature['title'] as String,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
                     fontSize: 18,
@@ -138,17 +136,57 @@ class InfoSection extends StatelessWidget {
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.7),
                     fontSize: 14,
-                    //height: 1.3,
                   ),
                   textAlign: TextAlign.center,
                 ),
               ],
             ),
-          ),
-        );
-      }).toList(),
-    );
+          );
+        }).toList(),
+      );
+    } else {
+      // Row layout for larger screens
+      return Row(
+        children: features.map((feature) {
+          return Expanded(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  Icon(
+                    feature['icon'] as IconData,
+                    color: Colors.cyan.withOpacity(0.8),
+                    size: 28,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    feature['title'] as String,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    feature['desc'] as String,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.7),
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      );
+    }
   }
+
 
   Widget _buildTrustIndicators() {
     return Row(

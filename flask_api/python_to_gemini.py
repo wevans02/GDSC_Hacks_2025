@@ -2,48 +2,51 @@ from google import genai
 from google.genai import types
 from clients import gemini_client
 
-def generate(user_input:str, bylaws_data:str):
-    # Check if the API key was set during initialization
-    # if not genai.conf.api_key:
-    #     print("Error: Gemini API key is not configured.")
-    #     return "Sorry, the AI service is currently unavailable."
+def generate(user_input: str, bylaws_data: str, city: str = None, context: str = None):
 
-    # --- Initialize the model here ---
-    # model = genai.GenerativeModel("gemini-2.5-flash-lite") # Updated model name
+    if user_input is None:
+        print("⚠️ Warning: user_input is None")
+    if bylaws_data is None:
+        print("⚠️ Warning: bylaws_data is None")
+    if city is None:
+        print("⚠️ Warning: city is None")
+    if context is None:
+        print("⚠️ Warning: context is None")
 
-    # Initialize an empty string for the extra_info_text
-    # extra_info_text = ""
-
-    # # Loop through bylaws_data and concatenate all the information into extra_info_text
-    # for i in bylaws_data:
-    #     extra_info_text += "\n" + i["pdf_content"]  # Concatenate each item to the string
+        
+    # Ensure we always work with strings
+    user_input = str(user_input or "").strip()
+    bylaws_data = str(bylaws_data or "No bylaw sections available.")
+    city = str(city or "Unknown City")
+    context = str(context or "No prior conversation context.")
 
     contents = [
         types.Content(
             role="user",
             parts=[
                 types.Part.from_text(text=f"""
-                    You are Paralegal, a conversational chatbot as part of a RAG pipeline about torontos bylaws.
-                                     
-                    You are given the following bylaw sections:
-                    {bylaws_data}
+You are Paralegal, a conversational chatbot as part of a RAG pipeline about {city}'s bylaws.
 
-                    User Question:
-                    {user_input}
+You are given the following bylaw sections:
+{bylaws_data}
 
-                    Instructions:
-                    1. Answer the question using **specific and precise details** from the bylaw sections.
-                    2. If the bylaws do not directly answer, provide the most relevant related information you can find in them.
-                    3. If you cannot answer at all from the given data, clearly state what information you do have and explain that the question cannot be fully answered.
-                    4. Some bylaw text may be **cut off at the start or end**. When responding, reconstruct cutoff words into full words so the answer reads naturally and is easy for the user to understand.
-                    5. Always prefer clarity and accuracy over speculation.
-                    6. Be concise in your answers.
-                    """), 
+User Question:
+{user_input}
+
+Context:
+{context}
+
+Instructions:
+1. Answer the question using **specific and precise details** from the bylaw sections.
+2. If the bylaws do not directly answer, provide the most relevant related information you can find in them.
+3. If you cannot answer at all from the given data, clearly state what information you do have and explain that the question cannot be fully answered.
+4. Some bylaw text may be **cut off at the start or end**. When responding, reconstruct cutoff words into full words so the answer reads naturally and is easy for the user to understand.
+5. Always prefer clarity and accuracy over speculation.
+6. Be concise in your answers.
+                """),
             ],
         ),
     ]
-
-    print("Stuff here: ",bylaws_data, "\n\n\n")
 
     generate_content_config = types.GenerateContentConfig(
         response_mime_type="text/plain",
@@ -54,12 +57,16 @@ def generate(user_input:str, bylaws_data:str):
     )
 
     output = ""
-    for chunk in gemini_client.models.generate_content_stream(
-        model="gemini-2.5-flash-lite",
-        contents=contents,
-        config=generate_content_config,
-    ):
-        output += chunk.text
-    return output
+    try:
+        for chunk in gemini_client.models.generate_content_stream(
+            model="gemini-2.5-flash-lite",
+            contents=contents,
+            config=generate_content_config,
+        ):
+            if hasattr(chunk, "text") and chunk.text:
+                output += chunk.text
+    except Exception as e:
+        # Fail gracefully so your API never crashes
+        return f"Error contacting Gemini: {e}"
 
-
+    return output if output else "No response generated."

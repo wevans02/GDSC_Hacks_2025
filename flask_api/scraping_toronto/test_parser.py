@@ -1,5 +1,5 @@
 # test_parser.py
-import parse_html # Import your updated parser script
+import flask_api.scraping_toronto.parse_html as parse_html # Import your updated parser script
 import os
 
 print("--- Starting test_parser.py ---")
