@@ -595,7 +595,7 @@ class _ChatWindowState extends State<ChatWindow> {
           body: jsonEncode({
             'query': query,
             'city': widget.selectedCity,
-            'conversation_context': context.take(10).toList(), // Send last 10 messages for context
+            'conversation_context': context.take(3).toList(), // Send last 3 messages for context
             'timestamp': DateTime.now().toIso8601String(),
           }),
         );

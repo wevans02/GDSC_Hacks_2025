@@ -1,7 +1,7 @@
-import parse_html
+import flask_api.scraping_toronto.parse_html as parse_html
 # import vector_index
 import embed_vectors
-from chunk_text import chunk_text
+from flask_api.scraping_toronto.chunk_text import chunk_text
 from dotenv import load_dotenv
 import os
 #for pdf
@@ -13,7 +13,7 @@ import pymongo
 
 # create_database.py modifications
 
-import parse_html
+import flask_api.scraping_toronto.parse_html as parse_html
 # import vector_index # Assuming this handles index creation
 import embed_vectors
 # ... (other imports: load_dotenv, os, requests, fitz, BytesIO, pymongo) ...

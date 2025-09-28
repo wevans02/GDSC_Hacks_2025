@@ -119,57 +119,86 @@ def handle_query():
     print(f"Received request at /api/query ({request.method})")
 
     if not request.is_json:
-        return jsonify({"error": "Request must be JSON"}), 400
+        return jsonify({"status": "error", "error": {"message": "Request must be JSON"}}), 400
 
     data = request.get_json()
-    user_query = data.get('query')
+    user_query = (data.get("query") or "").strip()
+    city = data.get("city", "Unknown City")
+    conversation_context = data.get("conversation_context", [])
+    timestamp = data.get("timestamp")
 
     if not user_query:
-        return jsonify({"error": "Missing 'query' in request body"}), 400
+        return jsonify({"status": "error", "error": {"message": "Missing 'query' in request body"}}), 400
 
-    # ---- Query the NEW collection ----
+    # ---- Vector search ----
     database_name = "bylaws"
-    collection_name = "bylaw_chunks" # Use the new chunk collection
-    print(f"Querying {database_name}.{collection_name} for: '{user_query}'")
-    results = query_database.query_database(user_query, database_name, collection_name)
-    # --------------------------------
+    collection_name = "bylaw_chunks"
+    results = []
+    try:
+        print(f"Querying {database_name}.{collection_name} for: '{user_query}'")
+        results = query_database.query_database(user_query, database_name, collection_name) or []
+    except Exception as e:
+        print(f"❌ Vector search error: {e}")
 
-    # ---- Prepare context from CHUNKS ----
-    context_text = ""
-    source_info = [] # Optional: Track sources
-    if results:
-        print(f"Retrieved {len(results)} relevant chunks.")
-        # Concatenate the text of the retrieved chunks
-        context_text = "\n\n---\n\n".join([chunk.get('chunk_text', '') for chunk in results if chunk.get('chunk_text')])
+    # ---- Prepare bylaw chunks ----
+    context_text = "\n\n---\n\n".join(
+        [chunk.get("chunk_text", "") for chunk in results if chunk.get("chunk_text")]
+    )
+    source_info = [
+        {
+            "title": chunk.get("title"),
+            "bylaw_id": chunk.get("original_bylaw_id"),
+            "pdf_url": chunk.get("pdf_url"),
+            "chunk": chunk.get("chunk_sequence"),
+            "score": chunk.get("score"),
+        }
+        for chunk in results
+    ]
 
-        # Optional: Prepare source info for display or logging
-        source_info = [
-            {
-                "title": chunk.get("title"),
-                "bylaw_id": chunk.get("original_bylaw_id"),
-                "pdf_url": chunk.get("pdf_url"),
-                "chunk": chunk.get("chunk_sequence"),
-                "score": chunk.get("score")
-            } for chunk in results
-        ]
-    else:
-        print("No relevant chunks found.")
-    # -----------------------------------
+    # ---- Conversation context ----
+    conversation_context_text = "\n".join(
+        [f"{'User' if msg.get('fromMe') else 'AI'}: {msg.get('text')}" for msg in conversation_context]
+    )
 
-    # ---- Call Gemini with CHUNK context ----
-    print("Sending query and context to Gemini...")
-    # Ensure python_to_gemini.generate can handle potentially empty context_text
-    ai_response = python_to_gemini.generate(user_query, context_text if context_text else "No relevant information found in bylaws.")
-    print("Received response from Gemini.")
-    # --------------------------------------
+    # ---- Call Gemini safely ----
+    ai_response = None
+    ai_error = None
+    try:
+        ai_response = python_to_gemini.generate(
+            user_query,
+            context_text if context_text else "No relevant information found in bylaws.",
+            city=city,
+            context=conversation_context_text,
+        )
+        status = "ok"
+    except Exception as e:
+        ai_error = str(e)
+        print(f"❌ Gemini error: {ai_error}")
+        status = "degraded"
 
-    # ---- Return AI response and optionally source info ----
+    # ---- Build response ----
+    if status == "degraded":
+        return jsonify({
+            "status": "degraded",
+            "message": (
+                "We couldn’t generate a natural-language answer right now "
+                "(the AI service is temporarily unavailable). "
+                "Here are the most relevant bylaw sources we found."
+            ),
+            "ai_response": None,
+            "ai_error": ai_error,
+            "retrieved_sources": source_info,
+            "city": city,
+            "timestamp": timestamp,
+        }), 200
+
     return jsonify({
-        'ai_response': ai_response,
-        'retrieved_sources': source_info # Optional: send sources back to frontend
-        # 'result': context_text # Probably don't send the raw context back
-    })
-    # -----------------------------------------------------
+        "status": "ok",
+        "ai_response": ai_response,
+        "retrieved_sources": source_info,
+        "city": city,
+        "timestamp": timestamp,
+    }), 200
 
 # if __name__ == '__main__':
     # Make sure debug=False for production deployments

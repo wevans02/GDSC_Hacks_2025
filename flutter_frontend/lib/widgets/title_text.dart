@@ -4,10 +4,12 @@ import 'package:google_fonts/google_fonts.dart';
 // Helper function for the main text style to avoid repetition
 TextStyle _titleTextStyle() {
   return GoogleFonts.poppins(
+    
     fontSize: 48,
     fontWeight: FontWeight.w700,
     // Note: The color here is only for text not covered by the gradient/ShaderMask
     color: Colors.white, 
+    
   );
 }
 
@@ -32,6 +34,7 @@ class TitleText extends StatelessWidget {
         return bylawGradient.createShader(bounds);
       },
       child: Text(
+        textAlign: TextAlign.center,
         'Bylaw',
         style: _titleTextStyle().copyWith(
           // Text color must be a non-transparent color (e.g., white)
@@ -49,12 +52,15 @@ class TitleText extends StatelessWidget {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: <Widget>[
           Text(
+            textAlign: TextAlign.center,
+
             'AI Powered Municipal ',
             style: _titleTextStyle(),
           ),
           // The ShaderMasked text widget
           bylawText,
           Text(
+            textAlign: TextAlign.center,
             ' Search',
             style: _titleTextStyle(),
           ),
