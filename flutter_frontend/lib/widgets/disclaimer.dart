@@ -6,6 +6,11 @@ class DisclaimerFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+      // adjustable cutoff for when to switch layout
+    const cutoff = 600.0; 
+
+    final isNarrow = MediaQuery.of(context).size.width < cutoff;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -18,14 +23,13 @@ class DisclaimerFooter extends StatelessWidget {
           ),
         ),
       ),
-      child: Column(
+      child: isNarrow ? Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           
           Text(
-            'This AI assistant provides information for research purposes only and is not a substitute for professional legal advice. '
-            'Responses may contain errors or be incomplete. Always verify information with official sources and consult with a qualified legal professional for specific legal matters. '
-            'The creators are not responsible for any decisions made based on this information.',
+            'Not legal advice. Always verify with official sources. ',
             style: TextStyle(
               color: Colors.white.withOpacity(0.6),
               fontSize: 11,
@@ -33,7 +37,48 @@ class DisclaimerFooter extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(width: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '© 2024 Paralegal AI • ',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.4),
+                  fontSize: 10,
+                ),
+              ),
+              GestureDetector(
+                onTap: () => _showFullDisclaimer(context),
+                child: Text(
+                  'View Full Terms',
+                  style: TextStyle(
+                    color: Colors.cyan.withOpacity(0.7),
+                    fontSize: 10,
+                    decoration: TextDecoration.underline,
+                    decorationColor: Colors.cyan.withOpacity(0.7),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      )
+      : Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          
+          Text(
+            'Not legal advice. Always verify with official sources. ',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.6),
+              fontSize: 11,
+              height: 1.4,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(width: 4),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
