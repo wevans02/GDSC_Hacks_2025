@@ -29,7 +29,17 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": allowed_urls}}) # Simplified CORS setup
+CORS(
+    app,
+    resources={r"/api/*": {
+        "origins": allowed_urls,
+        "supports_credentials": True,
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "expose_headers": ["Content-Type"],
+        "max_age": 86400,  # cache preflight for a day
+    }},
+)
 
 import datetime
 
