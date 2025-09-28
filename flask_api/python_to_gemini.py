@@ -13,40 +13,45 @@ def generate(user_input: str, bylaws_data: str, city: str = None, context: str =
     if context is None:
         print("⚠️ Warning: context is None")
 
-        
+
     # Ensure we always work with strings
     user_input = str(user_input or "").strip()
     bylaws_data = str(bylaws_data or "No bylaw sections available.")
     city = str(city or "Unknown City")
     context = str(context or "No prior conversation context.")
 
-    prompt = f"""You are Paralegal, a conversational chatbot as part of a RAG pipeline about {city}'s bylaws.
+    prompt_system = """You are Paralegal, a conversational chatbot as part of a RAG pipeline.
+    Your role is to help users understand and navigate municipal bylaws.
+    You should:
+    - Always use both the conversation history (context) and the bylaw sections provided.
+    - Answer based on bylaws when possible, but also respond to conversation-based questions (e.g., remembering last questions).
+    - Be clear, concise, and accurate."""
 
-You are given the following bylaw sections:
-{bylaws_data}
+    prompt_user = f"""
+    City: {city}
 
-User Question:
-{user_input}
+    Bylaw Sections:
+    {bylaws_data}
 
-Context:
-{context}
+    Conversation History:
+    {context}
 
-Instructions:
-1. Answer the question using **specific and precise details** from the bylaw sections.
-2. If the bylaws do not directly answer, provide the most relevant related information you can find in them.
-3. If you cannot answer at all from the given data, clearly state what information you do have and explain that the question cannot be fully answered.
-4. Some bylaw text may be **cut off at the start or end**. When responding, reconstruct cutoff words into full words so the answer reads naturally and is easy for the user to understand.
-5. Always prefer clarity and accuracy over speculation.
-6. Be concise in your answers.
-"""
-    print("PROMPT: ", prompt)
+    User Question:
+    {user_input}
+
+    Instructions:
+    1. Answer the question using **specific and precise details** from the bylaw sections when relevant.
+    2. If the bylaws do not directly answer, provide the most relevant related information you can find in them.
+    3. If the user refers to previous questions or context, summarize them based on the Conversation History.
+    4. If you cannot answer at all from the given data, clearly state what information you do have and explain that the question cannot be fully answered.
+    5. Some bylaw text may be **cut off at the start or end**. When responding, reconstruct cutoff words into full words so the answer reads naturally and is easy for the user to understand.
+    6. Always prefer clarity and accuracy over speculation.
+    7. Be concise in your answers.
+    """
+
     contents = [
-        types.Content(
-            role="user",
-            parts=[
-                types.Part.from_text(text=prompt),
-            ],
-        ),
+        types.Content(role="system", parts=[types.Part.from_text(prompt_system)]),
+        types.Content(role="user", parts=[types.Part.from_text(prompt_user)]),
     ]
 
     generate_content_config = types.GenerateContentConfig(
@@ -67,7 +72,7 @@ Instructions:
             if hasattr(chunk, "text") and chunk.text:
                 output += chunk.text
     except Exception as e:
-        # Fail gracefully so your API never crashes
-        return f"Error contacting Gemini: {e}"
+        output = f"Error contacting Gemini: {e}"
 
     return output if output else "No response generated."
+
