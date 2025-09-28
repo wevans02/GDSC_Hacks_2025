@@ -23,7 +23,9 @@ from email.mime.text import MIMEText
 allowed_urls = [
     "https://gdsc-2025.firebaseapp.com",
     "https://gdsc-2025.web.app",
-    "https://paralegalbylaw.org"
+    "https://paralegalbylaw.org",
+    "https://api.paralegalbylaw.org",
+    "https://api.paralegalbylaw.org/api/query"
 ]
 
 from dotenv import load_dotenv
