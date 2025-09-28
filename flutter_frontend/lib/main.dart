@@ -500,13 +500,14 @@ class _ChatWindowState extends State<ChatWindow> {
 
     // Build conversation context
     final conversationContext = _messages
-        .where((msg) => !msg.isLoading)
-        .map((msg) => {
-          'role': msg.fromMe ? 'user' : 'assistant',
-          'content': msg.text,
-          'timestamp': msg.time.toIso8601String(),
-        })
-        .toList();
+    .where((msg) => !msg.isLoading)
+    .map((msg) => {
+      'fromMe': msg.fromMe,
+      'text': msg.text,
+      'timestamp': msg.time.toIso8601String(),
+    })
+    .toList();
+
 
     if(mounted) {
         setState(() {
