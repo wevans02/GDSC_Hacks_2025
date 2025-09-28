@@ -1,11 +1,9 @@
 // widgets/app_header.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'about_page.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart';
-
 
 class AppHeader extends StatelessWidget {
   final String selectedCity;
@@ -25,6 +23,10 @@ class AppHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    const cutoff = 700.0; // adjust breakpoint as needed
+    final isNarrow = screenWidth < cutoff;
+
     return SafeArea(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15.0),
@@ -32,8 +34,8 @@ class AppHeader extends StatelessWidget {
           color: Colors.transparent,
           border: Border(
             bottom: BorderSide(
-              color: Colors.white.withOpacity(0.2), 
-              width: 1
+              color: Colors.white.withOpacity(0.2),
+              width: 1,
             ),
           ),
         ),
@@ -41,96 +43,35 @@ class AppHeader extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             // Left: App Name/Logo
-            Row(
-              children: [
-                MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
-                    onTap: onLogoTap ?? () => Navigator.of(context).popUntil((route) => route.isFirst),
-                    child: Text(
-                      'Paralegal',
-                      style: GoogleFonts.exo2(
-                        fontSize: isInChatView ? 28 : 32,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: onLogoTap ??
+                    () => Navigator.of(context).popUntil((route) => route.isFirst),
+                child: Text(
+                  'Paralegal',
+                  style: GoogleFonts.exo2(
+                    fontSize: isInChatView ? 24 : 28,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    letterSpacing: 1.2,
                   ),
                 ),
-
-                const SizedBox(width: 32),
-
-                // About
-                // MouseRegion(
-                //   cursor: SystemMouseCursors.click,
-                //   child: GestureDetector(
-                //     onTap: () {
-                //       Navigator.of(context).push(
-                //         MaterialPageRoute(builder: (_) => const AboutPage()),
-                //       );
-                //     },
-                //     child: Text(
-                //       "About",
-                //       style: GoogleFonts.poppins(
-                //         color: Colors.white,
-                //         fontSize: 18,
-                //       ),
-                //     ),
-                //   ),
-                // ),
-
-                //const SizedBox(width: 32),
-
-                // Request a City
-                MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
-                    onTap: () => _showRequestCityDialog(context),
-                    child: Text(
-                      "Request A City",
-                      style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(width: 32),
-
-                // Feedback
-                MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
-                    onTap: () => _showFeedbackDialog(context),
-                    child: Text(
-                      "Feedback",
-                      style: GoogleFonts.poppins(color: Colors.white, fontSize: 18),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
 
-            
-            //Text("FAQ")
-          
-            
-            // Right: Navigation Menu
+            // Right: City dropdown + nav items (or hamburger)
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // City Dropdown
                 _buildCityDropdown(context),
-                //const SizedBox(width: 16),
-                
-                // About Button
-                //_buildAboutButton(context),
-                
-                // Optional: Settings button for future features
-                const SizedBox(width: 8),
-               // _buildSettingsButton(context),
+                const SizedBox(width: 12),
+                if (!isNarrow) ...[
+                  _buildNavLink("Request A City", () => _showRequestCityDialog(context)),
+                  const SizedBox(width: 20),
+                  _buildNavLink("Feedback", () => _showFeedbackDialog(context)),
+                ] else
+                  _buildHamburgerMenu(context),
               ],
             ),
           ],
@@ -139,27 +80,50 @@ class AppHeader extends StatelessWidget {
     );
   }
 
-  void _showRequestCityDialog(BuildContext context) {
-    final cityController = TextEditingController();
-    final emailController = TextEditingController();
-    final notesController = TextEditingController();
+  /// Hamburger menu for narrow screens
+  Widget _buildHamburgerMenu(BuildContext context) {
+    return PopupMenuButton<int>(
+      icon: Icon(Icons.menu, color: Colors.white),
+      onSelected: (value) {
+        if (value == 1) _showRequestCityDialog(context);
+        if (value == 2) _showFeedbackDialog(context);
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(value: 1, child: Text("Request A City")),
+        PopupMenuItem(value: 2, child: Text("Feedback")),
+      ],
+    );
+  }
 
+  Widget _buildNavLink(String label, VoidCallback onTap) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Text(
+          label,
+          style: GoogleFonts.poppins(color: Colors.white, fontSize: 16),
+        ),
+      ),
+    );
+  }
+
+  void _showRequestCityDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) {
         return Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24), // less margin around dialog
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 500), // wider than default
-            child: _RequestCityForm(), // we'll build this widget below
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: _RequestCityForm(),
           ),
         );
       },
     );
-
   }
-
 
   Widget _buildCityDropdown(BuildContext context) {
     return Container(
@@ -188,7 +152,7 @@ class AppHeader extends StatelessWidget {
                 value: city,
                 child: Text(
                   city,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
@@ -201,43 +165,16 @@ class AppHeader extends StatelessWidget {
                 onCityChanged(newValue);
               }
             },
-            underline: Container(), // Remove default underline
+            underline: Container(),
             dropdownColor: Colors.blueGrey[800],
             icon: Icon(
               Icons.arrow_drop_down,
               color: Colors.white.withOpacity(0.8),
               size: 20,
             ),
-            style: TextStyle(
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 14,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAboutButton(BuildContext context) {
-    return TextButton(
-      onPressed: () => Navigator.of(context).pushNamed('/about'),
-      style: TextButton.styleFrom(
-        foregroundColor: Colors.white.withOpacity(0.8),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.info_outline, size: 16),
-          const SizedBox(width: 6),
-          Text(
-            'About',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -259,7 +196,8 @@ class AppHeader extends StatelessWidget {
               return Dialog(
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(24)),
-                insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+                insetPadding:
+                    const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 500),
                   child: Padding(
@@ -267,11 +205,13 @@ class AppHeader extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.check_circle, color: Colors.cyan, size: 64),
+                        const Icon(Icons.check_circle,
+                            color: Colors.cyan, size: 64),
                         const SizedBox(height: 16),
                         const Text(
                           "Thanks for your feedback!",
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 22, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 12),
                         const Text(
@@ -293,7 +233,8 @@ class AppHeader extends StatelessWidget {
             return Dialog(
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16)),
-              insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+              insetPadding:
+                  const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 500),
                 child: Padding(
@@ -303,7 +244,8 @@ class AppHeader extends StatelessWidget {
                     children: [
                       const Text(
                         "Submit Feedback",
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 16),
                       TextField(
@@ -314,7 +256,7 @@ class AppHeader extends StatelessWidget {
                           border: OutlineInputBorder(),
                         ),
                         inputFormatters: [
-                          LengthLimitingTextInputFormatter(200), // max 50 chars
+                          LengthLimitingTextInputFormatter(200),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -325,7 +267,7 @@ class AppHeader extends StatelessWidget {
                           border: OutlineInputBorder(),
                         ),
                         inputFormatters: [
-                          LengthLimitingTextInputFormatter(50), // max 50 chars
+                          LengthLimitingTextInputFormatter(50),
                         ],
                       ),
                       const SizedBox(height: 20),
@@ -341,49 +283,47 @@ class AppHeader extends StatelessWidget {
                               final feedback = feedbackController.text.trim();
                               final email = emailController.text.trim();
 
-                              if (feedback.isEmpty) {
-                                return;
-                              }
+                              if (feedback.isEmpty) return;
 
                               try {
                                 final response = await http.post(
-                                  Uri.parse("https://paralegalbylaw.org/api/feedback"), // change if needed
-                                  headers: {"Content-Type": "application/json"},
+                                  Uri.parse(
+                                      "https://api.paralegalbylaw.org/api/feedback"),
+                                  headers: {
+                                    "Content-Type": "application/json"
+                                  },
                                   body: jsonEncode({
                                     "feedback": feedback,
-                                    "email": email.isNotEmpty ? email : null,
+                                    "email":
+                                        email.isNotEmpty ? email : null,
                                   }),
                                 );
 
                                 if (response.statusCode == 200) {
-                                  // Success
                                   setState(() => submitted = true);
                                 } else {
-                                  // Server error
-                                  //print("❌ Feedback submit failed: ${response.body}");
                                   showDialog(
                                     context: context,
                                     builder: (_) => const AlertDialog(
                                       title: Text("Error"),
-                                      content: Text("Something went wrong submitting feedback."),
+                                      content: Text(
+                                          "Something went wrong submitting feedback."),
                                     ),
                                   );
                                 }
                               } catch (e) {
-                                // Network error
-                                //print("❌ Network error: $e");
                                 showDialog(
                                   context: context,
                                   builder: (_) => const AlertDialog(
                                     title: Text("Error"),
-                                    content: Text("Could not connect to server."),
+                                    content:
+                                        Text("Could not connect to server."),
                                   ),
                                 );
                               }
                             },
                             child: const Text("Submit"),
                           ),
-
                         ],
                       ),
                     ],
@@ -396,38 +336,6 @@ class AppHeader extends StatelessWidget {
       },
     );
   }
-
-
-  Widget _buildSettingsButton(BuildContext context) {
-    return IconButton(
-      onPressed: () {
-        // Future: Settings dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Settings coming soon!'),
-            backgroundColor: Colors.blue.shade600,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      },
-      icon: Icon(
-        Icons.settings_outlined,
-        color: Colors.white.withOpacity(0.6),
-        size: 20,
-      ),
-      tooltip: 'Settings (Coming Soon)',
-      style: IconButton.styleFrom(
-        padding: EdgeInsets.all(8),
-      ),
-    );
-  }
-
-  // void _showAboutDialog(BuildContext context) {
-  //   showDialog(
-  //     context: context,
-  //     builder: (context) => const AboutAppDialog(),
-  //   );
-  // }
 }
 
 class _RequestCityForm extends StatefulWidget {
@@ -445,7 +353,6 @@ class _RequestCityFormState extends State<_RequestCityForm> {
   @override
   Widget build(BuildContext context) {
     if (submitted) {
-      // Confirmation screen
       return Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -472,7 +379,6 @@ class _RequestCityFormState extends State<_RequestCityForm> {
       );
     }
 
-    // Input form
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -480,44 +386,35 @@ class _RequestCityFormState extends State<_RequestCityForm> {
         children: [
           TextField(
             controller: cityController,
-            decoration: const InputDecoration(labelText: "City name *", border: OutlineInputBorder(),),
-            
-            inputFormatters: [
-              LengthLimitingTextInputFormatter(50), // max 50 chars
-            ],
+            decoration: const InputDecoration(
+                labelText: "City name *", border: OutlineInputBorder()),
+            inputFormatters: [LengthLimitingTextInputFormatter(50)],
           ),
           const SizedBox(height: 6),
-          Text(
-            "We'll add the bylaws for this city when we can",
-            style: TextStyle(color: Colors.white.withAlpha(188))
-          ),
-
-
+          Text("We'll add the bylaws for this city when we can",
+              style: TextStyle(color: Colors.white.withAlpha(188))),
           const SizedBox(height: 16),
-
           TextField(
             controller: emailController,
-            decoration: const InputDecoration(labelText: "Email (optional)", border: OutlineInputBorder(),),
-            inputFormatters: [
-              LengthLimitingTextInputFormatter(50), // max 50 chars
-            ],
+            decoration: const InputDecoration(
+                labelText: "Email (optional)", border: OutlineInputBorder()),
+            inputFormatters: [LengthLimitingTextInputFormatter(50)],
           ),
           const SizedBox(height: 6),
-          Text("If you want to be notified when it's added", style: TextStyle(color: Colors.white.withAlpha(188))),
-
+          Text("If you want to be notified when it's added",
+              style: TextStyle(color: Colors.white.withAlpha(188))),
           const SizedBox(height: 16),
-
           TextField(
             controller: notesController,
             maxLines: 3,
-            decoration: const InputDecoration(labelText: "Description / Notes", border: OutlineInputBorder()),
-            inputFormatters: [
-              LengthLimitingTextInputFormatter(200), // max 50 chars
-            ],
+            decoration: const InputDecoration(
+                labelText: "Description / Notes",
+                border: OutlineInputBorder()),
+            inputFormatters: [LengthLimitingTextInputFormatter(200)],
           ),
           const SizedBox(height: 6),
-          Text("Any other comments you'd like to add", style: TextStyle(color: Colors.white.withAlpha(188))),
-
+          Text("Any other comments you'd like to add",
+              style: TextStyle(color: Colors.white.withAlpha(188))),
           const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
@@ -545,7 +442,8 @@ class _RequestCityFormState extends State<_RequestCityForm> {
 
                   try {
                     final response = await http.post(
-                      Uri.parse("https://paralegalbylaw.org/api/request-city"), // or your LAN IP in dev
+                      Uri.parse(
+                          "https://api.paralegalbylaw.org/api/request-city"),
                       headers: {"Content-Type": "application/json"},
                       body: jsonEncode({
                         "city": city,
@@ -555,19 +453,18 @@ class _RequestCityFormState extends State<_RequestCityForm> {
                     );
 
                     if (response.statusCode == 200) {
-                      setState(() => submitted = true); // show thank-you screen
+                      setState(() => submitted = true);
                     } else {
-                      //print("❌ Request city failed: ${response.body}");
                       showDialog(
                         context: context,
                         builder: (_) => const AlertDialog(
                           title: Text("Error"),
-                          content: Text("Something went wrong submitting your request."),
+                          content: Text(
+                              "Something went wrong submitting your request."),
                         ),
                       );
                     }
                   } catch (e) {
-                    //print("❌ Network error: $e");
                     showDialog(
                       context: context,
                       builder: (_) => const AlertDialog(
@@ -579,13 +476,10 @@ class _RequestCityFormState extends State<_RequestCityForm> {
                 },
                 child: const Text("Submit"),
               ),
-
             ],
           ),
         ],
       ),
     );
   }
-
-  
 }
