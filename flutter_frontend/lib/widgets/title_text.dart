@@ -20,7 +20,7 @@ class TitleText extends StatelessWidget {
   Widget build(BuildContext context) {
     // Define the gradient
     const LinearGradient bylawGradient = LinearGradient(
-      colors: <Color>[Colors.cyan, Colors.cyanAccent],
+      colors: <Color>[Colors.cyan, Colors.tealAccent],
       // Optional: Define start/end alignment for more control
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,

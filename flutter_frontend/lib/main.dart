@@ -108,8 +108,35 @@ class _MyHomePageState extends State<MyHomePage> {
   String? _initialQuery;
   String _selectedCity = 'Toronto'; // Track selected city
 
+  int _chatEpoch = 0;
+
   // Available cities for expansion
-  final List<String> _availableCities = ['Toronto', 'Waterloo'];
+  final List<String> _availableCities = ['Toronto', 'Waterloo', 'Guelph'];
+
+  Future<bool> _confirmResetChat(BuildContext context, String newCity) async {
+    if (!_isInChatView) return true; // no chat open — OK to switch silently
+    return await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Switch city?'),
+            content: Text(
+              'You’re currently chatting about $_selectedCity.\n'
+              'Switching to $newCity will clear this conversation.'
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Switch & Reset'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
 
 
   void _openRequestCitySheet(BuildContext context) {
@@ -238,18 +265,17 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   // --- Callback to handle city selection ---
-  void _onCityChanged(String newCity) {
+  void _onCityChanged(String newCity) async {
+    if (newCity == _selectedCity) return;
+
+    // Ask for confirmation if chat is active
+    final bool ok = await _confirmResetChat(context, newCity);
+    if (!ok) return; // User cancelled
+
     setState(() {
       _selectedCity = newCity;
+      _chatEpoch++; // Force ChatWindow to remount with fresh state
     });
-    // Could trigger reload of data or show message about city change
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('City changed to $_selectedCity'),
-        backgroundColor: kAccentColor,
-        duration: Duration(seconds: 2),
-      ),
-    );
   }
 
   @override
@@ -356,7 +382,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Colors.cyan.withAlpha(188), Colors.cyanAccent.withAlpha(188)],
+                          colors: [Colors.cyan.withAlpha(188), Colors.tealAccent.withAlpha(188)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -420,12 +446,13 @@ class _MyHomePageState extends State<MyHomePage> {
   // --- Builds the Main Chat View ---
   Widget _buildChatView(BuildContext context, String initialQuery) {
     return KeyedSubtree(
-      key: const ValueKey('ChatView'),
+      key: ValueKey('ChatView-${_selectedCity}-$_chatEpoch'),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: ChatWindow(
+              key: ValueKey('ChatWindow-${_selectedCity}-$_chatEpoch'), // <— NEW
               initialQuery: initialQuery,
               selectedCity: _selectedCity,
             ),
@@ -472,6 +499,60 @@ class _ChatWindowState extends State<ChatWindow> {
   bool _canSend = true;
   static const _cooldown = Duration(seconds: 3);
 
+  Widget _introMessage(String city) {
+    return RichText(
+      text: TextSpan(
+        style: TextStyle(
+          fontSize: 16,
+          color: Colors.white,
+          height: 1.4,
+        ),
+        children: [
+          const TextSpan(text: "Hello! I'm your AI assistant for "),
+          WidgetSpan(
+            child: ShaderMask(
+              shaderCallback: (bounds) => LinearGradient(
+                colors: [Colors.cyan, Colors.tealAccent],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ).createShader(bounds),
+              child: Text(
+                city,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white, // will be masked
+                ),
+              ),
+            ),
+          ),
+          const TextSpan(
+              text:
+                  " municipal bylaws. I can help you understand noise regulations, "
+                  "parking rules, zoning restrictions, and much more. What would you like to know?"),
+        ],
+      ),
+    );
+  }
+
+
+  // @override
+  // void didUpdateWidget(covariant ChatWindow oldWidget) {
+  //   super.didUpdateWidget(oldWidget);
+  //   if (oldWidget.selectedCity != widget.selectedCity) {
+  //     setState(() {
+  //       if (_messages.isNotEmpty && !_messages.first.fromMe) {
+  //         _messages[0] = ChatMessage(
+  //           text: "", // leave text empty, we’ll render via custom builder
+  //           time: DateTime.now(),
+  //           fromMe: false,
+  //           context: {'introCity': widget.selectedCity},
+  //         );
+
+  //       }
+  //     });
+  //   }
+  // }
+
   @override
   void initState() {
     super.initState();
@@ -481,14 +562,16 @@ class _ChatWindowState extends State<ChatWindow> {
       } else {
         if(mounted) {
           setState(() {
-              _messages.add(
-                ChatMessage(
-                  text: "Hello! I'm your AI assistant for ${widget.selectedCity} municipal bylaws. I can help you understand noise regulations, parking rules, zoning restrictions, and much more. What would you like to know?",
-                  time: DateTime.now(),
-                  fromMe: false,
-                )
-              );
+            _messages.add(
+              ChatMessage(
+                text: "", // leave empty, handled by custom renderer
+                time: DateTime.now(),
+                fromMe: false,
+                context: {'introCity': widget.selectedCity},
+              ),
+            );
           });
+
         }
       }
     });
@@ -700,43 +783,56 @@ class _ChatWindowState extends State<ChatWindow> {
     );
  }
 
- Widget _buildMessageBubble(BuildContext context, ChatMessage message) {
-   final bool isUser = message.fromMe;
-   final bubbleColor = isUser ? kUserBubbleColor : kAiBubbleColor;
-   final borderRadius = BorderRadius.only(
-     topLeft: const Radius.circular(18),
-     topRight: const Radius.circular(18),
-     bottomLeft: Radius.circular(isUser ? 18 : 4),
-     bottomRight: Radius.circular(isUser ? 4 : 18),
-   );
+  Widget _buildMessageBubble(BuildContext context, ChatMessage message) {
+    final bool isUser = message.fromMe;
+    final bubbleColor = isUser ? kUserBubbleColor : kAiBubbleColor;
+    final borderRadius = BorderRadius.only(
+      topLeft: const Radius.circular(18),
+      topRight: const Radius.circular(18),
+      bottomLeft: Radius.circular(isUser ? 18 : 4),
+      bottomRight: Radius.circular(isUser ? 4 : 18),
+    );
 
-   return ClipRRect(
-     borderRadius: borderRadius,
-     child: BackdropFilter(
-       filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
-       child: Container(
-         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-         decoration: BoxDecoration(
-           color: bubbleColor,
-           borderRadius: borderRadius,
-         ),
-         child: message.isLoading
-             ? const Center(child: LoadingMessage())
-             : MarkdownBody(
-                 data: message.text,
-                 selectable: true,
-                 styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                     p: Theme.of(context).textTheme.bodyLarge?.copyWith(color: kTextColor, height: 1.4),
-                     a: TextStyle(color: kAccentColor, decoration: TextDecoration.underline, decorationColor: kAccentColor),
-                 ),
-                 onTapLink: (text, href, title) {
-                    if(href != null) _launchUrl(href);
-                 },
-               ),
-       ),
-     ),
-   );
- }
+    final introCity = message.context?['introCity'];
+
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: bubbleColor,
+            borderRadius: borderRadius,
+          ),
+          child: message.isLoading
+              ? const Center(child: LoadingMessage())
+              : introCity != null
+                  ? _introMessage(introCity) // render the gradient intro
+                  : MarkdownBody(
+                      data: message.text,
+                      selectable: true,
+                      styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
+                          .copyWith(
+                        p: Theme.of(context)
+                            .textTheme
+                            .bodyLarge
+                            ?.copyWith(color: kTextColor, height: 1.4),
+                        a: TextStyle(
+                          color: kAccentColor,
+                          decoration: TextDecoration.underline,
+                          decorationColor: kAccentColor,
+                        ),
+                      ),
+                      onTapLink: (text, href, title) {
+                        if (href != null) _launchUrl(href);
+                      },
+                    ),
+        ),
+      ),
+    );
+  }
+
 
  Widget _buildSourcesSection(BuildContext context, List<Map<String, dynamic>> sources) {
    final sourcesToDisplay = sources.take(5).toList();

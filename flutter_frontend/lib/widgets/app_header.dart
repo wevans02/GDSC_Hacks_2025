@@ -146,6 +146,8 @@ class AppHeader extends StatelessWidget {
           ),
           const SizedBox(width: 6),
           DropdownButton<String>(
+            
+            //focusColor: Colors.white,
             value: selectedCity,
             items: availableCities.map((String city) {
               return DropdownMenuItem<String>(
@@ -166,7 +168,7 @@ class AppHeader extends StatelessWidget {
               }
             },
             underline: Container(),
-            dropdownColor: Colors.blueGrey[800],
+            dropdownColor: Colors.grey[900]!,
             icon: Icon(
               Icons.arrow_drop_down,
               color: Colors.white.withOpacity(0.8),
@@ -181,11 +183,14 @@ class AppHeader extends StatelessWidget {
       ),
     );
   }
+ 
 
   void _showFeedbackDialog(BuildContext context) {
     final feedbackController = TextEditingController();
     final emailController = TextEditingController();
     bool submitted = false;
+    bool isSubmitting = false; // NEW
+
 
     showDialog(
       context: context,
@@ -279,51 +284,52 @@ class AppHeader extends StatelessWidget {
                             child: const Text("Cancel"),
                           ),
                           ElevatedButton(
-                            onPressed: () async {
-                              final feedback = feedbackController.text.trim();
-                              final email = emailController.text.trim();
+                            onPressed: isSubmitting
+                                ? null // disable during submit
+                                : () async {
+                                    final feedback = feedbackController.text.trim();
+                                    final email = emailController.text.trim();
 
-                              if (feedback.isEmpty) return;
+                                    if (feedback.isEmpty) return;
 
-                              try {
-                                final response = await http.post(
-                                  Uri.parse(
-                                      "https://api.paralegalbylaw.org/api/feedback"),
-                                  headers: {
-                                    "Content-Type": "application/json"
+                                    setState(() => isSubmitting = true);
+
+                                    try {
+                                      final response = await http.post(
+                                        Uri.parse("https://api.paralegalbylaw.org/api/feedback"),
+                                        headers: {"Content-Type": "application/json"},
+                                        body: jsonEncode({
+                                          "feedback": feedback,
+                                          "email": email.isNotEmpty ? email : null,
+                                        }),
+                                      );
+
+                                      if (response.statusCode == 200) {
+                                        setState(() {
+                                          submitted = true;
+                                          isSubmitting = false;
+                                        });
+                                      } else {
+                                        setState(() => isSubmitting = false);
+                                        _showError(context, "Something went wrong submitting feedback.");
+                                      }
+                                    } catch (e) {
+                                      setState(() => isSubmitting = false);
+                                      _showError(context, "Could not connect to server.");
+                                    }
                                   },
-                                  body: jsonEncode({
-                                    "feedback": feedback,
-                                    "email":
-                                        email.isNotEmpty ? email : null,
-                                  }),
-                                );
-
-                                if (response.statusCode == 200) {
-                                  setState(() => submitted = true);
-                                } else {
-                                  showDialog(
-                                    context: context,
-                                    builder: (_) => const AlertDialog(
-                                      title: Text("Error"),
-                                      content: Text(
-                                          "Something went wrong submitting feedback."),
+                            child: isSubmitting
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                     ),
-                                  );
-                                }
-                              } catch (e) {
-                                showDialog(
-                                  context: context,
-                                  builder: (_) => const AlertDialog(
-                                    title: Text("Error"),
-                                    content:
-                                        Text("Could not connect to server."),
-                                  ),
-                                );
-                              }
-                            },
-                            child: const Text("Submit"),
+                                  )
+                                : const Text("Submit"),
                           ),
+
                         ],
                       ),
                     ],
@@ -349,6 +355,7 @@ class _RequestCityFormState extends State<_RequestCityForm> {
   final notesController = TextEditingController();
 
   bool submitted = false;
+  bool isSubmitting = false;
 
   @override
   Widget build(BuildContext context) {
@@ -424,58 +431,57 @@ class _RequestCityFormState extends State<_RequestCityForm> {
                 child: const Text("Cancel"),
               ),
               ElevatedButton(
-                onPressed: () async {
-                  final city = cityController.text.trim();
-                  final email = emailController.text.trim();
-                  final notes = notesController.text.trim();
+                onPressed: isSubmitting
+                    ? null
+                    : () async {
+                        final city = cityController.text.trim();
+                        final email = emailController.text.trim();
+                        final notes = notesController.text.trim();
 
-                  if (city.isEmpty) {
-                    showDialog(
-                      context: context,
-                      builder: (_) => const AlertDialog(
-                        title: Text("Missing city name"),
-                        content: Text("Please enter a city."),
-                      ),
-                    );
-                    return;
-                  }
+                        if (city.isEmpty) {
+                          _showError(context, "Please enter a city.");
+                          return;
+                        }
 
-                  try {
-                    final response = await http.post(
-                      Uri.parse(
-                          "https://api.paralegalbylaw.org/api/request-city"),
-                      headers: {"Content-Type": "application/json"},
-                      body: jsonEncode({
-                        "city": city,
-                        "email": email.isNotEmpty ? email : null,
-                        "notes": notes.isNotEmpty ? notes : null,
-                      }),
-                    );
+                        setState(() => isSubmitting = true);
 
-                    if (response.statusCode == 200) {
-                      setState(() => submitted = true);
-                    } else {
-                      showDialog(
-                        context: context,
-                        builder: (_) => const AlertDialog(
-                          title: Text("Error"),
-                          content: Text(
-                              "Something went wrong submitting your request."),
+                        try {
+                          final response = await http.post(
+                            Uri.parse("https://api.paralegalbylaw.org/api/request-city"),
+                            headers: {"Content-Type": "application/json"},
+                            body: jsonEncode({
+                              "city": city,
+                              "email": email.isNotEmpty ? email : null,
+                              "notes": notes.isNotEmpty ? notes : null,
+                            }),
+                          );
+
+                          if (response.statusCode == 200) {
+                            setState(() {
+                              submitted = true;
+                              isSubmitting = false;
+                            });
+                          } else {
+                            setState(() => isSubmitting = false);
+                            _showError(context, "Something went wrong submitting your request.");
+                          }
+                        } catch (e) {
+                          setState(() => isSubmitting = false);
+                          _showError(context, "Could not connect to the server.");
+                        }
+                      },
+                child: isSubmitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
-                      );
-                    }
-                  } catch (e) {
-                    showDialog(
-                      context: context,
-                      builder: (_) => const AlertDialog(
-                        title: Text("Error"),
-                        content: Text("Could not connect to the server."),
-                      ),
-                    );
-                  }
-                },
-                child: const Text("Submit"),
+                      )
+                    : const Text("Submit"),
               ),
+
             ],
           ),
         ],
@@ -483,3 +489,19 @@ class _RequestCityFormState extends State<_RequestCityForm> {
     );
   }
 }
+
+ void _showError(BuildContext context, String msg) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Error"),
+        content: Text(msg),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+  }

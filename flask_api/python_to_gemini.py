@@ -35,14 +35,14 @@ Conversation History (chronological order, older first, newer later):
 {context}
 
 Instructions:
-1. Answer the question using **specific and precise details** from the bylaw sections when relevant.
-2. If the bylaws do not directly answer, provide the most relevant related information you can find in them.
-3. If the user refers to previous questions or context, summarize them based on the Conversation History.
-4. If you cannot answer at all from the given data, clearly state what information you do have and explain that the question cannot be fully answered.
-5. Some bylaw text may be **cut off at the start or end**. When responding, reconstruct cutoff words into full words so the answer reads naturally and is easy for the user to understand.
-6. Always prefer clarity and accuracy over speculation.
-7. If bylaw text contains fees with multiple effective dates, always select the fee that is in effect as of {easy_str} and ignore older dates. Do not list past amounts unless the user explicitly asks for historical values.
-8. Be concise in your answers.
+1. Keep your answers concise — 3–6 sentences maximum, unless the user explicitly asks for more detail. Use bullet points where suitable.
+2. Answer the question using **specific and precise details** from the bylaw sections when relevant.
+3. If the bylaws do not directly answer, provide the most relevant related information you can find in them.
+4. If the user refers to previous questions or context, summarize them based on the Conversation History.
+5. If you cannot answer at all from the given data, clearly state what information you do have and explain that the question cannot be fully answered.
+6. Some bylaw text may be **cut off at the start or end**. When responding, reconstruct cutoff words into full words so the answer reads naturally and is easy for the user to understand.
+7. Always prefer clarity and accuracy over speculation.
+8. If bylaw text contains fees with multiple effective dates, always select the fee that is in effect as of {easy_str} and ignore older dates. Do not list past amounts unless the user explicitly asks for historical values.
 """
     print("PROMPT: ", prompt)
     contents = [
@@ -59,7 +59,7 @@ Instructions:
         temperature=0.5,
         top_p=0.95,
         top_k=40,
-        max_output_tokens=8192,
+        max_output_tokens=512,
     )
 
     output = ""

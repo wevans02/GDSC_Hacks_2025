@@ -23,7 +23,8 @@ allowed_urls = [
     "https://gdsc-2025.web.app",
     "https://paralegalbylaw.org",
     "https://api.paralegalbylaw.org",
-    "http://localhost:55974"
+    "http://localhost:55974",
+    "http://localhost:58150"
 ]
 
 from dotenv import load_dotenv
@@ -32,6 +33,7 @@ load_dotenv()
 city_to_collection = {
     "Toronto": "bylaw_chunks",
     "Waterloo": "waterloo",
+    'Guelph': 'guelph'
 }
 
 
@@ -183,6 +185,19 @@ def handle_query():
         print(source_info)
     elif (city == "Waterloo"):
         print('found for waterloo')
+        source_info = [
+            {
+                "title": chunk.get("bylaw_title"),
+                "bylaw_id": chunk.get("bylaw_id"),
+                "pdf_url": chunk.get("url"),
+                # "chunk": chunk.get("chunk_sequence"),
+                # "score": chunk.get("score"),
+            }
+            for chunk in results
+        ]
+        print(source_info)
+    elif (city == "Guelph"):
+        print('found for guelph')
         source_info = [
             {
                 "title": chunk.get("bylaw_title"),
