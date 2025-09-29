@@ -28,6 +28,13 @@ allowed_urls = [
 from dotenv import load_dotenv
 load_dotenv()
 
+city_to_collection = {
+    "toronto": "bylaw_chunks",
+    "waterloo": "waterloo",
+}
+
+
+
 app = Flask(__name__)
 CORS(
     app,
@@ -132,16 +139,20 @@ def handle_query():
 
     data = request.get_json()
     user_query = (data.get("query") or "").strip()
-    city = data.get("city", "Unknown City")
+    city = (data.get("city", "Unknown City"))
     conversation_context = data.get("conversation_context", [])
     timestamp = data.get("timestamp")
+
+    if (city not in city_to_collection):
+        return jsonify({"status": "error", "error": {"message": "City Not found"}}), 400
 
     if not user_query:
         return jsonify({"status": "error", "error": {"message": "Missing 'query' in request body"}}), 400
 
     # ---- Vector search ----
     database_name = "bylaws"
-    collection_name = "bylaw_chunks"
+    collection_name = city_to_collection[city]
+    
     results = []
     try:
         print(f"Querying {database_name}.{collection_name} for: '{user_query}'")
@@ -153,16 +164,32 @@ def handle_query():
     context_text = "\n\n---\n\n".join(
         [chunk.get("chunk_text", "") for chunk in results if chunk.get("chunk_text")]
     )
-    source_info = [
-        {
-            "title": chunk.get("title"),
-            "bylaw_id": chunk.get("original_bylaw_id"),
-            "pdf_url": chunk.get("pdf_url"),
-            "chunk": chunk.get("chunk_sequence"),
-            "score": chunk.get("score"),
-        }
-        for chunk in results
-    ]
+    # this is L implemnentation, I will aim to normalize the fields across the collections
+    # growing pains
+    if (city == "toronto"):
+
+        source_info = [
+            {
+                "title": chunk.get("title"),
+                "bylaw_id": chunk.get("original_bylaw_id"),
+                "pdf_url": chunk.get("pdf_url"),
+                # "chunk": chunk.get("chunk_sequence"),
+                # "score": chunk.get("score"),
+            }
+            for chunk in results
+        ]
+    elif (city == "waterloo"):
+        source_info = [
+            {
+                "title": chunk.get("bylaw_title"),
+                "bylaw_id": chunk.get("bylaw_id"),
+                "pdf_url": chunk.get("url"),
+                # "chunk": chunk.get("chunk_sequence"),
+                # "score": chunk.get("score"),
+            }
+            for chunk in results
+        ]
+
 
     # ---- Conversation context ----
     conversation_context_text = "\n".join(

@@ -17,12 +17,15 @@ def query_database(query_text: str, database_name: str, collection_name: str):
         return []
 
     vector_index_name = "vector_index"
-    embedding_path = "chunk_embedding_cpu"
+    if collection_name == "toronto":
+        embedding_path = "chunk_embedding_cpu"
+    else:
+        embedding_path = "chunk_embedding"
     # ---- Define pipeline for the NEW collection ----
     # Vector index name (ensure it matches the one created)
     vector_index_name = "vector_index" # Or whatever name is used in vector_index.py
     # Field containing embeddings
-    embedding_path = "chunk_embedding_cpu" # Or "chunk_embedding" if you changed it
+    #embedding_path = "chunk_embedding_cpu" # Or "chunk_embedding" if you changed it
 
     pipeline = [
         {
