@@ -1,8 +1,11 @@
 from google import genai
 from google.genai import types
 from clients import gemini_client
+from datetime import datetime
 
 def generate(user_input: str, bylaws_data: str, city: str = None, context: str = None):
+    now = datetime.now()
+    easy_str = now.strftime("%B %d, %Y")   # e.g. "September 29, 2025"
 
     if user_input is None:
         print("⚠️ Warning: user_input is None")
@@ -38,7 +41,8 @@ Instructions:
 4. If you cannot answer at all from the given data, clearly state what information you do have and explain that the question cannot be fully answered.
 5. Some bylaw text may be **cut off at the start or end**. When responding, reconstruct cutoff words into full words so the answer reads naturally and is easy for the user to understand.
 6. Always prefer clarity and accuracy over speculation.
-7. Be concise in your answers.
+7. If bylaw text contains fees with multiple effective dates, always select the fee that is in effect as of {easy_str} and ignore older dates. Do not list past amounts unless the user explicitly asks for historical values.
+8. Be concise in your answers.
 """
     print("PROMPT: ", prompt)
     contents = [
