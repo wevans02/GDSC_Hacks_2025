@@ -42,6 +42,9 @@ def query_database(query_text: str, database_name: str, collection_name: str):
                 'original_bylaw_id': 1, # Keep original bylaw ID
                 'title': 1, # Keep original bylaw title
                 'pdf_url': 1, # Keep original PDF URL
+                'url': 1,
+                'bylaw_id': 1,
+                'bylaw_title': 1,
                 'chunk_sequence': 1, # Keep chunk sequence number
                 'chunk_text': 1, # <<< RETURN THE CHUNK TEXT
                 'score': { # Keep the search score

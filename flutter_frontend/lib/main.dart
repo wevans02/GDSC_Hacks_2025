@@ -109,7 +109,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String _selectedCity = 'Toronto'; // Track selected city
 
   // Available cities for expansion
-  final List<String> _availableCities = ['Toronto'];
+  final List<String> _availableCities = ['Toronto', 'Waterloo'];
 
 
   void _openRequestCitySheet(BuildContext context) {

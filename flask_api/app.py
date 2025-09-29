@@ -22,15 +22,16 @@ allowed_urls = [
     "https://gdsc-2025.firebaseapp.com",
     "https://gdsc-2025.web.app",
     "https://paralegalbylaw.org",
-    "https://api.paralegalbylaw.org"
+    "https://api.paralegalbylaw.org",
+    "http://localhost:55974"
 ]
 
 from dotenv import load_dotenv
 load_dotenv()
 
 city_to_collection = {
-    "toronto": "bylaw_chunks",
-    "waterloo": "waterloo",
+    "Toronto": "bylaw_chunks",
+    "Waterloo": "waterloo",
 }
 
 
@@ -166,7 +167,8 @@ def handle_query():
     )
     # this is L implemnentation, I will aim to normalize the fields across the collections
     # growing pains
-    if (city == "toronto"):
+    if (city == "Toronto"):
+        print('found for tornotno')
 
         source_info = [
             {
@@ -178,7 +180,9 @@ def handle_query():
             }
             for chunk in results
         ]
-    elif (city == "waterloo"):
+        print(source_info)
+    elif (city == "Waterloo"):
+        print('found for waterloo')
         source_info = [
             {
                 "title": chunk.get("bylaw_title"),
@@ -189,6 +193,9 @@ def handle_query():
             }
             for chunk in results
         ]
+        print(source_info)
+    else:
+        print("UH OH NOT FOUND")
 
 
     # ---- Conversation context ----
