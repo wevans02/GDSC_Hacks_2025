@@ -69,13 +69,18 @@ class AppHeader extends StatelessWidget {
                 if (!isNarrow) ...[
                   MouseRegion(
                     cursor: SystemMouseCursors.click,
-                    _buildNavLink("Request A City", () => _showRequestCityDialog(context)),
-                  ),  
+                    child: _buildNavLink(
+                      "Request A City",
+                      () => _showRequestCityDialog(context),
+                    ),
+                  ),
                   const SizedBox(width: 20),
                   MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    _buildNavLink("Feedback", () => _showFeedbackDialog(context)),
+                    child: _buildNavLink(
+                      "Feedback",
+                      () => _showFeedbackDialog(context),
                     ),
+                  ),
                 ] else
                   _buildHamburgerMenu(context),
               ],
