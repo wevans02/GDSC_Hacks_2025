@@ -76,6 +76,7 @@ class AppHeader extends StatelessWidget {
                   ),
                   const SizedBox(width: 20),
                   MouseRegion(
+                    cursor: SystemMouseCursors.click,
                     child: _buildNavLink(
                       "Feedback",
                       () => _showFeedbackDialog(context),
