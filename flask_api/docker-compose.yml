@@ -16,6 +16,8 @@ services:
         limits:
           cpus: '2.0' # Limit to 2 CPU cores
           memory: '4G' # Limit to 4GB of RAM
+    volumes:
+      - ./logs:/app/logs
     # Note: We don't need to expose ports to the host PC anymore,
     # because the cloudflared service will access it directly.
 

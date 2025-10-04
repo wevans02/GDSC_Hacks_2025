@@ -17,7 +17,7 @@ def query_database(query_text: str, database_name: str, collection_name: str):
         return []
 
     vector_index_name = "vector_index"
-    if collection_name == "toronto":
+    if collection_name == "bylaw_chunks":
         embedding_path = "chunk_embedding_cpu"
     else:
         embedding_path = "chunk_embedding"
