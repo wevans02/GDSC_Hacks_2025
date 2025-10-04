@@ -14,10 +14,13 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import query_database
 import python_to_gemini
-
+import json
 import os, smtplib
 from email.mime.text import MIMEText
+LOG_DIR = "logs"
+os.makedirs(LOG_DIR, exist_ok=True)
 
+LOG_FILE = os.path.join(LOG_DIR, "query_log.jsonl")
 allowed_urls = [
     "https://gdsc-2025.firebaseapp.com",
     "https://gdsc-2025.web.app",
@@ -233,6 +236,22 @@ def handle_query():
         ai_error = str(e)
         print(f"❌ Gemini error: {ai_error}")
         status = "degraded"
+
+
+    # ---- Write to log file ----
+    try:
+        log_entry = {
+            "timestamp": timestamp,
+            "city": city,
+            "query": user_query,
+            "ai_response": ai_response,
+            "ai_error": ai_error,
+            "retrieved_sources": source_info,
+        }
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+    except Exception as log_err:
+        print(f"⚠️ Failed to log query/response: {log_err}")
 
     # ---- Build response ----
     if status == "degraded":
