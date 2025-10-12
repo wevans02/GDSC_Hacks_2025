@@ -92,7 +92,7 @@ def _write_to_file(subject, body):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     log_entry = f"[{timestamp}] {subject}\n{body}\n{'-'*40}\n"
     try:
-        with open("submissions.log", "a", encoding="utf-8") as f:
+        with open("logs/submissions.log", "a", encoding="utf-8") as f:
             f.write(log_entry)
         print("📝 Saved submission to submissions.log")
     except Exception as e:
@@ -162,9 +162,42 @@ def handle_query():
     results = []
     try:
         print(f"Querying {database_name}.{collection_name} for: '{user_query}'")
-        results = query_database.query_database(user_query, database_name, collection_name) or []
+        results, error = query_database.query_database(user_query, database_name, collection_name) or []
     except Exception as e:
         print(f"❌ Vector search error: {e}")
+        error = e
+
+    # if DB connection failed for some reason
+    if len(results) == 0:
+        log_entry=jsonify({
+            "status": "degraded",
+            "message": (
+                "DB Error, could not connect to mongodb atlas cluster."
+            ),
+            "ai_response": "I apologize, the bylaw database is currently down. \nI've been sent an email automatically and I'll fix the issue as soon as I can. \nThanks for your patience.",
+            "ai_error": None,
+            "retrieved_sources": [],
+            "city": city,
+            "timestamp": timestamp,
+        })
+
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+            print("LOGGED")
+
+            
+        send_email(subject="[DB FAILURE] Paralegal Mongo Cluster failed", body=f"DB name: {database_name}.{collection_name}, \n user query: {user_query}\n results: {results}, \n error: {error}")
+        return jsonify({
+            "status": "degraded",
+            "message": (
+                "DB Error, could not connect to mongodb atlas cluster."
+            ),
+            "ai_response": "I apologize, the bylaw database is currently down. \nI've been sent an email automatically and I'll fix the issue as soon as I can. \nThanks for your patience.",
+            "ai_error": None,
+            "retrieved_sources": [],
+            "city": city,
+            "timestamp": timestamp,
+        }), 200
 
     # ---- Prepare bylaw chunks ----
     context_text = "\n\n---\n\n".join(
@@ -213,7 +246,10 @@ def handle_query():
         ]
         print(source_info)
     else:
-        print("UH OH NOT FOUND")
+       log_entry = {
+            "timestamp": timestamp,
+            "city": f"{city} NOT FOUND",
+        }
 
 
     # ---- Conversation context ----
@@ -239,6 +275,7 @@ def handle_query():
 
 
     # ---- Write to log file ----
+    print("about to log")
     try:
         log_entry = {
             "timestamp": timestamp,
@@ -250,19 +287,34 @@ def handle_query():
         }
         with open(LOG_FILE, "a", encoding="utf-8") as f:
             f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+            print("LOGGED")
     except Exception as log_err:
         print(f"⚠️ Failed to log query/response: {log_err}")
 
     # ---- Build response ----
     if status == "degraded":
+        log_entry=jsonify({
+            "status": "degraded",
+            "message": (
+                "Gemini API error, likely server busy. "
+            ),
+            "ai_response": "Couldn’t generate a natural-language answer right now. \nThe server for our AI is too busy. Please try again later. \nNevertheless, Here are the most relevant bylaw sources we found.",
+            "ai_error": ai_error,
+            "retrieved_sources": source_info,
+            "city": city,
+            "timestamp": timestamp,
+        })
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+            print("LOGGED")
+
+
         return jsonify({
             "status": "degraded",
             "message": (
-                "We couldn’t generate a natural-language answer right now "
-                "(the AI service is temporarily unavailable). "
-                "Here are the most relevant bylaw sources we found."
+                "Gemini API error, likely server busy. "
             ),
-            "ai_response": None,
+            "ai_response": "Couldn’t generate a natural-language answer right now. \nThe server for our AI is too busy. Please try again later. \nNevertheless, Here are the most relevant bylaw sources we found.",
             "ai_error": ai_error,
             "retrieved_sources": source_info,
             "city": city,

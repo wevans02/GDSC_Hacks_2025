@@ -19,6 +19,7 @@ _mongo_client = None
 def get_mongo_client():
     """Gets the MongoDB client, initializing it on the first call."""
     global _mongo_client
+    error = None
     if _mongo_client is None:
         print(f"Process {os.getpid()}: Initializing MongoDB client for the first time...")
         DATABASE_LOGIN = os.getenv("DATABASE_LOGIN")
@@ -29,10 +30,13 @@ def get_mongo_client():
             print("got client I think")
             _mongo_client.admin.command('ping')
             print(f"Process {os.getpid()}: MongoDB connection successful.")
+            error = None
         except pymongo.errors.ConnectionFailure as e:
             print(f"MongoDB connection failed: {e}")
             _mongo_client = None # Ensure it remains None on failure
-    return _mongo_client
+            error = e
+
+    return _mongo_client, error
 
 # def configure_gemini():
 #     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")

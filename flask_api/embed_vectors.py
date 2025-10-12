@@ -15,6 +15,11 @@ from sentence_transformers import SentenceTransformer
 # Use a "private" global variable
 _model = None
 
+cache_dir = os.path.join(os.getcwd(), "sentence_transformer_cache/")
+os.makedirs(cache_dir, exist_ok=True)
+os.environ['TRANSFORMERS_CACHE'] = cache_dir
+os.environ['SENTENCE_TRANSFORMERS_HOME'] = cache_dir
+
 def get_embedding_model():
 
     """
@@ -25,7 +30,9 @@ def get_embedding_model():
     if _model is None:
         print(f"Process {os.getpid()}: Initializing sentence transformer model for the first time...")
         torch.set_num_threads(1)
-        _model = SentenceTransformer('all-MiniLM-L6-v2', device="cpu")
+        print("yesy2")
+        _model = SentenceTransformer('all-MiniLM-L6-v2', device="cpu", cache_folder=cache_dir)
+        print("yesy3")
         print(f"Process {os.getpid()}: Model initialized.")
     return _model
 

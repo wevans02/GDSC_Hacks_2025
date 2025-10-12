@@ -1,12 +1,12 @@
 import embed_vectors
 import pymongo
-from clients import get_mongo_client # <-- Import the getter function
+from clients import get_mongo_client
 
 def query_database(query_text: str, database_name: str, collection_name: str):
-    mongo_client = get_mongo_client() # <-- Get the client here
+    mongo_client, error = get_mongo_client() # <-- Get the client here
     if not mongo_client:
         print("Error: MongoDB client is not available.")
-        return []
+        return [], error
     
     # This will now use the lazy-loading version of the model
     print("EMBEDDING")
