@@ -17,7 +17,9 @@ services:
           cpus: '2.0' # Limit to 2 CPU cores
           memory: '4G' # Limit to 4GB of RAM
     volumes:
-      - ./logs:/app/logs
+      - ./logs:/home/appuser/app/logs
+      - ./model_cache:/home/appuser/app/sentence_transformer_cache
+
     # Note: We don't need to expose ports to the host PC anymore,
     # because the cloudflared service will access it directly.
 
