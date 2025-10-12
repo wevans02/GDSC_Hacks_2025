@@ -19,6 +19,7 @@ services:
     volumes:
       - ./logs:/home/appuser/app/logs
       - ./model_cache:/home/appuser/app/sentence_transformer_cache
+      - ./paralegal-logs-566e4c93d0f5.json:/home/appuser/app/paralegal-logs-566e4c93d0f5.json:ro
 
     # Note: We don't need to expose ports to the host PC anymore,
     # because the cloudflared service will access it directly.
