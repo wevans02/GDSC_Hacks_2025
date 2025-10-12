@@ -17,6 +17,23 @@ import python_to_gemini
 import json
 import os, smtplib
 from email.mime.text import MIMEText
+
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+import datetime
+import json
+from dotenv import load_dotenv
+load_dotenv()
+
+# log setup, synced with google sheets
+SERVICE_ACCOUNT_FILE = os.getenv("SERVICE_ACCOUNT_FILE")
+SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
+SHEET_NAME = "Paralegal Logs"
+RANGE_NAME = f"'{SHEET_NAME}'!A1"
+
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+
 LOG_DIR = "logs"
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -30,16 +47,41 @@ allowed_urls = [
     "http://localhost:58150"
 ]
 
-from dotenv import load_dotenv
-load_dotenv()
+# === Setup client ===
+creds = service_account.Credentials.from_service_account_file(
+    SERVICE_ACCOUNT_FILE, scopes=SCOPES
+)
+service = build("sheets", "v4", credentials=creds)
+sheet = service.spreadsheets()
+
+def append_log_entry(query: str="", response: str="", other_logs: str="", timestamp: str=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")):
+    """
+    Append a single log row. 
+    """
+    # Build the row values
+    # If extra dict, we convert it to JSON string or key=value pairs
+    
+    values = [[timestamp, query, response, other_logs]]
+    body = {"values": values}
+    try:
+        result = sheet.values().append(
+            spreadsheetId=SPREADSHEET_ID,
+            range=RANGE_NAME,
+            valueInputOption="RAW",  # “RAW” means do not parse as formulas
+            insertDataOption="INSERT_ROWS",
+            body=body
+        ).execute()
+        # Optionally: result.get("updates") tells how many rows were appended
+        return result
+    except HttpError as e:
+        print("Error appending to sheet:", e)
+        return None
 
 city_to_collection = {
     "Toronto": "bylaw_chunks",
     "Waterloo": "waterloo",
     'Guelph': 'guelph'
 }
-
-
 
 app = Flask(__name__)
 CORS(
@@ -55,6 +97,7 @@ CORS(
 )
 
 import datetime
+
 
 def send_email(subject, body):
     """Try to send an email. Fallback to writing into a log file."""
@@ -94,6 +137,7 @@ def _write_to_file(subject, body):
     try:
         with open("logs/submissions.log", "a", encoding="utf-8") as f:
             f.write(log_entry)
+            append_log_entry(other_logs=json.dumps(log_entry, ensure_ascii=False))
         print("📝 Saved submission to submissions.log")
     except Exception as e:
         print(f"❌ Failed to write to log file: {e}")
@@ -162,14 +206,14 @@ def handle_query():
     results = []
     try:
         print(f"Querying {database_name}.{collection_name} for: '{user_query}'")
-        results, error = query_database.query_database(user_query, database_name, collection_name) or []
+        results, error = query_database.query_database(user_query, database_name, collection_name)
     except Exception as e:
         print(f"❌ Vector search error: {e}")
         error = e
 
     # if DB connection failed for some reason
     if len(results) == 0:
-        log_entry=jsonify({
+        log_entry={
             "status": "degraded",
             "message": (
                 "DB Error, could not connect to mongodb atlas cluster."
@@ -179,13 +223,14 @@ def handle_query():
             "retrieved_sources": [],
             "city": city,
             "timestamp": timestamp,
-        })
+        }
 
         with open(LOG_FILE, "a", encoding="utf-8") as f:
             f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+            append_log_entry(query=user_query, other_logs=json.dumps(log_entry, ensure_ascii=False))
             print("LOGGED")
 
-            
+
         send_email(subject="[DB FAILURE] Paralegal Mongo Cluster failed", body=f"DB name: {database_name}.{collection_name}, \n user query: {user_query}\n results: {results}, \n error: {error}")
         return jsonify({
             "status": "degraded",
@@ -287,13 +332,14 @@ def handle_query():
         }
         with open(LOG_FILE, "a", encoding="utf-8") as f:
             f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+            append_log_entry(other_logs=json.dumps(log_entry, ensure_ascii=False))
             print("LOGGED")
     except Exception as log_err:
         print(f"⚠️ Failed to log query/response: {log_err}")
 
     # ---- Build response ----
     if status == "degraded":
-        log_entry=jsonify({
+        log_entry={
             "status": "degraded",
             "message": (
                 "Gemini API error, likely server busy. "
@@ -303,9 +349,10 @@ def handle_query():
             "retrieved_sources": source_info,
             "city": city,
             "timestamp": timestamp,
-        })
+        }
         with open(LOG_FILE, "a", encoding="utf-8") as f:
             f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+            append_log_entry(other_logs=json.dumps(log_entry, ensure_ascii=False))
             print("LOGGED")
 
 

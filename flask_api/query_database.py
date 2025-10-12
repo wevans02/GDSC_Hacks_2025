@@ -14,7 +14,7 @@ def query_database(query_text: str, database_name: str, collection_name: str):
     print("DONE EMBEDDING AAH")
     if not query_vector:
         print("Error: Could not generate query vector.")
-        return []
+        return [], error
 
     vector_index_name = "vector_index"
     if collection_name == "bylaw_chunks":
@@ -61,14 +61,14 @@ def query_database(query_text: str, database_name: str, collection_name: str):
         # Use the imported client directly
         result = list(mongo_client[database_name][collection_name].aggregate(pipeline))
         print("results:: ", result)
-        return result
+        return result, "No Error"
     except pymongo.errors.OperationFailure as op_fail:
          print(f"Error during vector search aggregation: {op_fail}")
          print("  * Check if the vector index '{vector_index_name}' exists on collection '{collection_name}' and field '{embedding_path}'.")
-         return []
+         return [], "No Error"
     except Exception as e:
          print(f"An unexpected error occurred during database query: {e}")
-         return []
+         return [], "No Error"
     # -----------------------------------------
 
 # Example Call:

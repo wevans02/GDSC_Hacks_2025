@@ -48,14 +48,28 @@ class AppHeader extends StatelessWidget {
               child: GestureDetector(
                 onTap: onLogoTap ??
                     () => Navigator.of(context).popUntil((route) => route.isFirst),
-                child: Text(
-                  'Paralegal',
-                  style: GoogleFonts.exo2(
-                    fontSize: isInChatView ? 24 : 28,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                    letterSpacing: 1.2,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Paralegal',
+                      style: GoogleFonts.exo2(
+                        fontSize: isInChatView ? 24 : 28,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    if (!isNarrow)
+                      MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: _buildNavLink(
+                        "About",
+                        () => _showRequestCityDialog(context),
+                      ),
                   ),
+                  ],
                 ),
               ),
             ),
@@ -99,10 +113,12 @@ class AppHeader extends StatelessWidget {
       onSelected: (value) {
         if (value == 1) _showRequestCityDialog(context);
         if (value == 2) _showFeedbackDialog(context);
+        if (value == 3) _showAboutPage(context);
       },
       itemBuilder: (context) => [
         PopupMenuItem(value: 1, child: Text("Request A City")),
         PopupMenuItem(value: 2, child: Text("Feedback")),
+        PopupMenuItem(value: 3, child: Text("About")),
       ],
     );
   }
@@ -135,6 +151,10 @@ class AppHeader extends StatelessWidget {
         );
       },
     );
+  }
+
+  Widget _showAboutPage(BuildContext context){
+    return Text("TODO");
   }
 
   Widget _buildCityDropdown(BuildContext context) {

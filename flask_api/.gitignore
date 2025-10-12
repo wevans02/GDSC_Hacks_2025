@@ -1,3 +1,6 @@
 .env
 cloudflared/*.json
 cloudflared/config.yml
+paralegal-logs-566e4c93d0f5.json
+model_cache/
+logs/
