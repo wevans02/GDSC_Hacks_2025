@@ -1,5 +1,6 @@
 // widgets/app_header.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_frontend/widgets/about_page.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -48,29 +49,17 @@ class AppHeader extends StatelessWidget {
               child: GestureDetector(
                 onTap: onLogoTap ??
                     () => Navigator.of(context).popUntil((route) => route.isFirst),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Paralegal',
-                      style: GoogleFonts.exo2(
-                        fontSize: isInChatView ? 24 : 28,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    SizedBox(width: 16),
-                    if (!isNarrow)
-                      MouseRegion(
-                      cursor: SystemMouseCursors.click,
-                      child: _buildNavLink(
-                        "About",
-                        () => _showRequestCityDialog(context),
-                      ),
+                child: Text(
+                  'Paralegal',
+                  style: GoogleFonts.exo2(
+                    fontSize: isInChatView ? 24 : 28,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    letterSpacing: 1.2,
                   ),
-                  ],
-                ),
+                                  
+                
+                                  ),
               ),
             ),
 
@@ -96,6 +85,15 @@ class AppHeader extends StatelessWidget {
                       () => _showFeedbackDialog(context),
                     ),
                   ),
+                  SizedBox(width: 16),
+                    if (!isNarrow)
+                      MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: _buildNavLink(
+                        "About",
+                        () => Navigator.push(context, MaterialPageRoute(builder: (context) => AboutPage()),),
+                      ),
+                    )
                 ] else
                   _buildHamburgerMenu(context),
               ],

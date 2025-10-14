@@ -4,3 +4,4 @@ cloudflared/config.yml
 paralegal-logs-566e4c93d0f5.json
 model_cache/
 logs/
+/scraping_waterloo/waterloo_data/
