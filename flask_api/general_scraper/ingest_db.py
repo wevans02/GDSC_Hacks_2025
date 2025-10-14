@@ -1,3 +1,7 @@
+'''
+Takes the data extracted from the scraper.py, embeds it and uploads it to the mongodb collection.
+'''
+
 import os, json, glob, hashlib, time
 from typing import List, Dict, Generator
 from dotenv import load_dotenv
@@ -5,28 +9,31 @@ import requests
 import pymongo
 from pymongo.errors import BulkWriteError
 
-# ---------------- Config ----------------
-# Pick the model you want:
-EMBED_MODEL = "text-embedding-3-small"   # 1536-dim (cheap/fast)
-# EMBED_MODEL = "text-embedding-3-large" # 3072-dim (more accurate)
-
+# =================================================================
+# Config
+EMBED_MODEL = "text-embedding-3-small"   # 1536-dim 
 OPENAI_URL = "https://api.openai.com/v1/embeddings"
 BATCH_SIZE = 128
 
 # Which fields will be text-indexed for BM25:
 BM25_FIELDS = ["text", "contextual_summary", "section_title", "page_title"]
 
-SKIP_CONTENT_TYPES = {"general_info"}   # <- add anything else you want to exclude
+# sometimes the scraper finds "general info", I found it tended to be irrelevant
+# and so to reduce noise I will skip it, it wont be inserted.
+SKIP_CONTENT_TYPES = {"general_info"} 
 
-# ---------------- Utils ----------------
+# =================================================================
+# Utils
+# hash for dedupe and file naming
 def sha1(text: str) -> str:
     return hashlib.sha1(text.encode("utf-8", errors="ignore")).hexdigest()
 
+# read through scraped data saved as json
 def iter_json_files(input_dir: str):
     for p in glob.glob(os.path.join(input_dir, "*.json")):
         yield p
 
-
+# load chunks from the json
 def load_chunks(path: str) -> List[Dict]:
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -78,7 +85,7 @@ def load_chunks(path: str) -> List[Dict]:
         })
     return out
 
-
+# embed text in batches with openAI
 def embed_texts(texts: List[str], api_key: str, model: str) -> List[List[float]]:
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload = {"model": model, "input": texts}
@@ -87,7 +94,9 @@ def embed_texts(texts: List[str], api_key: str, model: str) -> List[List[float]]
     data = r.json()
     return [d["embedding"] for d in data["data"]]
 
-# --------------- Main -------------------
+
+# =================================================================
+# Main, ingests, embeds, uploads
 def ingest_dir(
     input_dir: str,
     mongodb_uri: str,
@@ -97,11 +106,12 @@ def ingest_dir(
     openai_api_key: str,
     drop_if_exists: bool = False,
 ):
+    # connect to DB, correct cluster. drop old if specified
     client = pymongo.MongoClient(mongodb_uri)
     db = client[db_name]
     if drop_if_exists and collection_name in db.list_collection_names():
         db[collection_name].drop()
-        print(f"🧹 Dropped {db_name}.{collection_name}")
+        print(f"[INFO] Dropped {db_name}.{collection_name}")
     col = db[collection_name]
 
     # Unique on chunk_hash, and helpful query indexes
@@ -114,9 +124,10 @@ def ingest_dir(
     to_insert = []
     seen = set()
     files = list(iter_json_files(input_dir))
-    print(f"📂 Found {len(files)} JSON files in {input_dir}")
+    print(f"[INFO] Found {len(files)} JSON files in {input_dir}")
 
     total_chunks = 0
+    # go through each file, read chunks out of file and hash to dedupe
     for path in files:
         chunks = load_chunks(path)
         total_chunks += len(chunks)
@@ -130,7 +141,7 @@ def ingest_dir(
             d["city"] = city
             to_insert.append(d)
 
-    print(f"🧮 Unique chunks to embed: {len(to_insert)} (from {total_chunks} total)")
+    print(f"[INFO] Unique chunks to embed: {len(to_insert)} (from {total_chunks} total)")
 
     # Embed in batches and insert
     inserted = 0
@@ -140,7 +151,7 @@ def ingest_dir(
         try:
             vectors = embed_texts(inputs, openai_api_key, EMBED_MODEL)
         except Exception as e:
-            print(f"❌ Embedding failed for batch {i}-{i+len(batch)}: {e}")
+            print(f"[ERROR] Embedding failed for batch {i}-{i+len(batch)}: {e}")
             continue
 
         for doc, vec in zip(batch, vectors):
@@ -156,11 +167,11 @@ def ingest_dir(
             inserted += (len(batch) - dup)
             others = [e for e in bwe.details.get("writeErrors", []) if e.get("code") != 11000]
             if others:
-                print(f"⚠️ Non-dup write errors: {others[:2]} ...")
+                print(f"[WARN] Non-dup write errors: {others[:2]} ...")
         except Exception as e:
-            print(f"❌ Insert failed: {e}")
+            print(f"[ERROR] Insert failed: {e}")
 
-    print(f"✅ Inserted {inserted} docs → {db_name}.{collection_name}")
+    print(f"Inserted {inserted} docs → {db_name}.{collection_name}")
     client.close()
 
 if __name__ == "__main__":
@@ -169,21 +180,12 @@ if __name__ == "__main__":
     if not OPENAI_API_KEY:
         raise RuntimeError("Set OPENAI_API_KEY in .env")
 
-    # Atlas connection:
-    # Prefer a full URI via MONGODB_URI. Fallback builds from DATABASE_LOGIN (username:password@cluster)
-    MONGODB_URI = os.getenv("MONGODB_URI")
-    if not MONGODB_URI:
-        login = os.getenv("DATABASE_LOGIN")
-        if not login:
-            raise RuntimeError("Set MONGODB_URI or DATABASE_LOGIN in .env")
-        # Adjust cluster host to your actual Atlas cluster
-
-        # print("LOGION:", login)
-        MONGODB_URI = f"mongodb+srv://{login}@paralegal-rag.ujgail4.mongodb.net/?retryWrites=true&w=majority&appName=Paralegal-RAG"
-
+    login = os.getenv("DATABASE_LOGIN")
+    if not login:
+        raise RuntimeError("[ERROR] Set MONGODB_URI or DATABASE_LOGIN in .env")
+    MONGODB_URI = f"mongodb+srv://{login}@paralegal-rag.ujgail4.mongodb.net/?retryWrites=true&w=majority&appName=Paralegal-RAG"
     INPUT_DIR = os.getenv("EXTRACTED_DIR", "llm_extracted_data")
 
-    # Your target DB/collection (e.g., Bylaws.Waterloo)
     DB_NAME = os.getenv("DB_NAME", "Bylaws")
     COLLECTION = os.getenv("COLLECTION_NAME", "Waterloo")
     CITY = os.getenv("CITY", "Waterloo")

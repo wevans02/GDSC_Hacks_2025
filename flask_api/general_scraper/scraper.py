@@ -1,43 +1,46 @@
-# I was getting tired of have customized scrapers for each city, and still getting only mediocre results
-# this one should scrape the whole city website, starting from the root URL and then using Crawl4AI and 
-# an LLM Extraction Strategy to extract anything useful. I noticed people asking other specific things 
-# not only found in bylaws on the city site. eg, can I park on X specific street at this time, which sometimes the model didnt know.
-# Hoping this way I fix a few problems:
+'''
+I was getting tired of have customized scrapers for each city, and still getting only mediocre results
+this one should scrape the whole city website, starting from the root URL and then using Crawl4AI and 
+an LLM Extraction Strategy to extract anything useful. I noticed people asking other specific things 
+not only found in bylaws on the city site. eg, can I park on X specific street at this time, which sometimes the model didnt know.
+Hoping this way I fix a few problems:
 
-# 1. scraper is general, easily adaptable to multiple cities
-# 2. brings in more useful information that may be found beyond strictly city's /bylaws/ directory
-# 3. more quality data - I can have LLM make chunks more semantically chunked, 
-#       and also Ima try something along the lines of what was describe here by Anthropic about maintaining context in RAG:
-#       https://www.anthropic.com/engineering/contextual-retrieval
+1. scraper is general, easily adaptable to multiple cities
+2. brings in more useful information that may be found beyond strictly city's /bylaws/ directory
+3. more quality data - I can have LLM make chunks more semantically chunked, 
+      and also Ima try something along the lines of what was describe here by Anthropic about maintaining context in RAG:
+      https://www.anthropic.com/engineering/contextual-retrieval
+enables both vector semanticsearch and BM25 keyword search
+'''
 
-# Also when I upload to the DB it would be nice to have a tfidf of bm25 keyword maching to go along with the semantic search. 
-from __future__ import annotations
+# ----------------------------
+# Standard Library Imports
+# ----------------------------
+from __future__ import annotations  # Forward reference support
+from datetime import datetime       # For timestamps
+import asyncio                      # For asynchronous crawling
+import json                         # For JSON I/O
+import os                           # For environment variables & file paths
+import io                           # For PDF byte streams
+import hashlib                      # For potential hashing (if needed)
+import requests                     # For HTTP requests (PDFs, API calls)
+from typing import List, Dict       # For type hints
 
-from datetime import datetime
-import asyncio
-import json
-import os
-from typing import List, Dict
+# ----------------------------
+# Third-Party Libraries
+# ----------------------------
+from dotenv import load_dotenv                         # To load .env credentials
+from pypdf import PdfReader                             # For PDF text extraction
 from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode, LLMConfig
-from crawl4ai.extraction_strategy import LLMExtractionStrategy
+from crawl4ai.extraction_strategy import LLMExtractionStrategy  # For LLM-based extraction
 
-import os, json
-import io, os, json, hashlib
-import requests
-from pypdf import PdfReader
-import io, os, json, requests
-from pypdf import PdfReader
-from crawl4ai import LLMConfig, LLMExtractionStrategy
+# ----------------------------
+# Environment Setup
+# ----------------------------
+load_dotenv()                      # Load environment variables from .env
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # OpenAI API key
+GPT_MODEL = "gpt-4o-mini"          # Default model for extraction
 
-import os, io, json, requests
-from datetime import datetime
-from pypdf import PdfReader
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-GPT_MODEL = "gpt-4o-mini"
-
-from dotenv import load_dotenv
-load_dotenv()
 
 # TUNABLE EXTRACTION PROMPT
 # This is where you control what gets extracted and how it's chunked
@@ -82,25 +85,14 @@ Your final output must be ONLY the raw, valid JSON.
 NOW EXTRACT FROM THIS PAGE:
 """
 
-
-# extracts chunks from pdfs, basically funnels pdfs down to what the html turns into.
-# this is a fair bit slower, since we gotta download them
-import os, io, json, requests
-from datetime import datetime
-from pypdf import PdfReader
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-GPT_MODEL = "gpt-4o-mini"  # or "gpt-4o", "gpt-4-turbo"
-
-async def scrape_pdf_with_llm(url: str, output_dir="llm_extracted_data_toronto", pages_per_batch=5):
-    """
-    Extracts PDF text and sends it to GPT for structured extraction using EXTRACTION_PROMPT.
-    Automatically adds page numbers to prompt and to output chunks.
-    """
+# this function is called when we hit a pdf, special pipleine to handle pdfs
+# at the end, the result is funneled into the same json as the html pages end up as. 
+# we also save page number to make it easer for user to find in large pdfs.
+async def scrape_pdf_with_llm(url: str, output_dir=os.getenv("EXTRACTED_DIR", "llm_extracted_data_toronto"), pages_per_batch=5):
     os.makedirs(output_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # ---- 1. Download PDF ----
+    # 1. Download PDF
     print(f"📄 Downloading PDF: {url}")
     try:
         resp = requests.get(url, timeout=90)
@@ -109,19 +101,19 @@ async def scrape_pdf_with_llm(url: str, output_dir="llm_extracted_data_toronto",
         print(f"❌ Failed to fetch PDF: {e}")
         return
 
-    # ---- 2. Extract text ----
+    # 2. Extract text 
     pdf_bytes = io.BytesIO(resp.content)
     reader = PdfReader(pdf_bytes)
     pages = [page.extract_text() or "" for page in reader.pages]
     total_pages = len(pages)
 
     if not any(p.strip() for p in pages):
-        print(f"⚠️ No text found in PDF {url}")
+        print(f"[WARN] No text found in PDF {url}")
         return
 
-    print(f"✅ Extracted text from {total_pages} pages")
+    print(f"[INFO] Extracted text from {total_pages} pages")
 
-    # ---- 3. Process in batches ----
+    # 3. Process in batches of 5
     all_chunks = []
 
     for i in range(0, total_pages, pages_per_batch):
@@ -152,7 +144,8 @@ NOW EXTRACT FROM THE FOLLOWING PDF PAGES ({batch_start}-{batch_end}):
 {combined_text}
         """
 
-        print(f"🤖 Sending pages {batch_start}-{batch_end} to GPT...")
+        # send contstructed pages with prompt to GPT
+        print(f"[INFO] Sending pages {batch_start}-{batch_end} to GPT...")
 
         try:
             llm_response = requests.post(
@@ -184,7 +177,7 @@ NOW EXTRACT FROM THE FOLLOWING PDF PAGES ({batch_start}-{batch_end}):
             print("llm resonse: ", llm_response.json()["choices"][0]["message"]["content"])
             continue
 
-    # ---- 4. Combine + save ----
+    # 4. Combine + save
     output = {
         "url": url,
         "scraped_at": timestamp,
@@ -390,7 +383,7 @@ async def main():
     """
     
     # We will start from the byklaw page to make sure we get it then we will continue out to other pages maybe. 
-    start_url = "https://www.toronto.ca/legdocs/bylaws/lawmcode.htm?1760412162426"
+    start_url = os.getenv("START_SCRAPE_URL")
     
     # Keywords to prioritize (best-first search)
     keywords = [
