@@ -1,4 +1,4 @@
-import embed_vectors
+import flask_api.OLD_SCRAPERS.embed_vectors as embed_vectors
 import pymongo
 from clients import get_mongo_client
 

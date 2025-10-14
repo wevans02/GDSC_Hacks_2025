@@ -115,3 +115,6 @@ def embed_text(text: str) -> list[float]:
 
 # # Example call (usually called from create_database.py):
 # # update_documents_with_embeddings("bylaws", "bylaw_chunks")
+
+# this uses the OpenAI Api so we should get better embeddings, at least theyre higher dimension
+

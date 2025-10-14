@@ -1,6 +1,6 @@
 import flask_api.scraping_toronto.parse_html as parse_html
 # import vector_index
-import embed_vectors
+import flask_api.OLD_SCRAPERS.embed_vectors as embed_vectors
 from flask_api.scraping_toronto.chunk_text import chunk_text
 from dotenv import load_dotenv
 import os
@@ -15,7 +15,7 @@ import pymongo
 
 import flask_api.scraping_toronto.parse_html as parse_html
 # import vector_index # Assuming this handles index creation
-import embed_vectors
+import flask_api.OLD_SCRAPERS.embed_vectors as embed_vectors
 # ... (other imports: load_dotenv, os, requests, fitz, BytesIO, pymongo) ...
 
 
