@@ -207,7 +207,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         return;
                       }
                       try {
-                        final uri = Uri.parse('https://api.paralegalbylaw.org/api/request-city');
+                        final uri = Uri.parse('http://127.0.0.1:5000/api/request-city');
                         final res = await http.post(
                           uri,
                           headers: {'Content-Type': 'application/json'},
@@ -670,7 +670,7 @@ class _ChatWindowState extends State<ChatWindow> {
 
   // --- Enhanced API helper with context ---
   Future<Map<String, dynamic>> requestAPI(String query, List<Map<String, dynamic>> context) async {
-      final uri = Uri.parse('https://api.paralegalbylaw.org/api/query');
+      final uri = Uri.parse('http://127.0.0.1:5000/api/query');
 
       try {
         final res = await http.post(
