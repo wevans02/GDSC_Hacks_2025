@@ -1,15 +1,39 @@
-'''
-main function query hybrid retrieves relevant chunks from database given query
-1. creates and returns embedding from openAI using openai_embed
-2. does a keyword (BM25) search, along with vector semantic search on the embedding to retrieve relevant chunks
-3. merges results from the two queries and returns the top 5 most relevant chunks.
-'''
-
 import pymongo, os, requests
 from heapq import nlargest
 import json
 
-# use API to embed query. give query and api key, returns list of float embedding, 1536 dim.
+# --- Gemini query embedding (matches your document embeddings) ---
+def gemini_embed_query(query: str, api_key: str):
+    """
+    Returns a 768-dim embedding vector for the query,
+    matching your database embeddings.
+    """
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        "gemini-embedding-001:embedContent"
+    )
+    headers = {
+        "x-goog-api-key": api_key,
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "models/gemini-embedding-001",
+        "content": {"parts": [{"text": query}]},
+        # Match corpus embeddings
+        "output_dimensionality": 768,
+        # Mark as query-type vector (slightly different internal projection)
+        "task_type": "RETRIEVAL_QUERY"
+    }
+
+    r = requests.post(url, headers=headers, json=payload, timeout=60)
+    r.raise_for_status()
+
+    vec = r.json()["embedding"]["values"]
+    if len(vec) != 768:
+        print(f"[WARN] Query embedding dim mismatch: {len(vec)} (expected 768)")
+    return vec
+
+# If you ever decide to switch DB embeddings to OpenAI instead, you can still keep this:
 def openai_embed(query: str, api_key: str, model="text-embedding-3-small"):
     r = requests.post(
         "https://api.openai.com/v1/embeddings",
@@ -18,128 +42,122 @@ def openai_embed(query: str, api_key: str, model="text-embedding-3-small"):
         timeout=60,
     )
     r.raise_for_status()
-    return r.json()["data"][0]["embedding"]
+    return r.json()["data"][0]["embedding"]  # 1536-d for text-embedding-3-small
 
-
-# manual hybrid search cuz im poor
-# queries with vector, then with bm25, then merges. mongodb can do this all in one search but its too expensive for me
-# honestly too this doesnt add THAT much overhead for now.
-def query_hybrid(mongodb_uri, db_name, col_name, query_text):
+def query_hybrid(mongodb_uri, db_name, col_name, query_text, city: str = None, k_each: int = 10):
     """
-    Perform hybrid retrieval:
-      1. Text-based (BM25 keyword)
-      2. Vector-based (semantic)
-    Then merge both by normalized score and return top 5.
+    Hybrid retrieval:
+      1) Text (BM25) leg via $search.text
+      2) Vector (semantic) leg via $search.knnBeta (Gemini vecs)
+      3) Normalize+blend (0.6 vector + 0.4 text) and return top 5 documents
     """
-
     client = pymongo.MongoClient(mongodb_uri, tls=True)
     col = client[db_name][col_name]
-    api_key = os.getenv("OPENAI_API_KEY")
 
-    # Step 1: Get embedding for query
-    qvec = openai_embed(query_text, api_key)
+    # Embed the query with GEMINI to match your stored embeddings
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_key:
+        raise RuntimeError("Set GEMINI_API_KEY in env for query embeddings")
+    qvec = gemini_embed_query(query_text, gemini_key)  # matches corpus vectors
 
-    # Step 2: Run text (BM25) search
+    # ---- Text (BM25) leg ----
+    text_search = {
+        "$search": {
+            "index": "default",
+            "compound": {
+                **({
+                    "filter": [{
+                        "equals": {"path": "city", "value": city}
+                    }]
+                } if city else {}),
+                "should": [
+                    {
+                        "text": {
+                            "query": query_text,
+                            "path": ["contextual_summary", "section_title", "page_title"],
+                            "score": {"boost": {"value": 3}}
+                        }
+                    },
+                    {
+                        "text": {
+                            "query": query_text,
+                            "path": ["text", "combined_text"]
+                        }
+                    },
+                ],
+            },
+        }
+    }
+
     text_pipeline = [
-        {
-            "$search": {
-                "index": "default",
-                "text": {
-                    "query": query_text,
-                    "path": ["text", "contextual_summary", "section_title", "page_title"],
-                    "score": {"boost": {"value": 3}}
-                }
-            }
-        },
+        text_search,
         {"$addFields": {"bm25_score": {"$meta": "searchScore"}}},
-        {"$limit": 10},
-        {"$project": {
-            "_id": 0,
-            "chunk_text": {"$ifNull": ["$chunk_text", "$text"]},
-            "section_title": 1,
-            "url": 1,
-            "page_numbers": 1,
-            "bm25_score": 1
-        }}
+        {"$limit": k_each},
+        {"$project": {"embedding": 0}}  # drop large vector
     ]
-    # list of results with relevant keywords
-    text_results = list(col.aggregate(text_pipeline))
+    text_results = list(col.aggregate(text_pipeline, allowDiskUse=True))
 
-    # Step 3: Run vector search
-    vector_pipeline = [
-        {
-            "$search": {
-                "index": "default",
-                "knnBeta": {
-                    "vector": qvec,
-                    "path": "embedding",
-                    "k": 10
-                }
+    # ---- Vector (semantic) leg ----
+    # knnBeta can't be nested in compound.should in the same stage; use a separate leg.
+    vector_search = {
+        "$search": {
+            "index": "default",
+            "knnBeta": {
+                "path": "embedding",
+                "vector": qvec,
+                "k": k_each,
+                **({
+                    "filter": {
+                        "equals": {"path": "city", "value": city}
+                    }
+                } if city else {})
             }
-        },
+        }
+    }
+    vector_pipeline = [
+        vector_search,
         {"$addFields": {"vector_score": {"$meta": "searchScore"}}},
-        {"$project": {
-            "_id": 0,
-            "chunk_text": {"$ifNull": ["$chunk_text", "$text"]},
-            "section_title": 1,
-            "url": 1,
-            "page_numbers": 1,
-            "vector_score": 1
-        }}
+        {"$limit": k_each},
+        {"$project": {"embedding": 0}}
     ]
+    vector_results = list(col.aggregate(vector_pipeline, allowDiskUse=True))
 
-    vector_results = list(col.aggregate(vector_pipeline))
+    # Full detailed BM25 results
+    print("\n📘 BM25 RESULTS (FULL DETAILS):")
+    for i, r in enumerate(text_results, 1):
+        print(r)
 
-    # debug prints
-    # print(f"🔎 Query: {query_text}")
-    # print(f"→ BM25 results: {len(text_results)} | Vector results: {len(vector_results)}")
-    # if text_results:
-    #     print("  BM25 top hit sample:", json.dumps(text_results[0], indent=2)[:300])
-    # if vector_results:
-    #     print("  Vector top hit sample:", json.dumps(vector_results[0], indent=2)[:300])
+    print("VECTOR===============")
+    for i, r in enumerate(vector_results, 1):
+        print(r)
 
-
-    # Step 4: Normalize + Merge
+    # ---- Normalize + merge (by URL + text) ----
     merged = {}
 
-    def add_or_update(entry, score, score_type):
-        url = entry.get("url", "unknown")
-        key = (url, entry.get("chunk_text", ""))
+    def add(entry, score_field):
+        key = (entry.get("url", "unknown"), entry.get("combined_text") or entry.get("text") or "")
         if key not in merged:
-            merged[key] = entry.copy()
-            merged[key]["bm25_score"] = 0
-            merged[key]["vector_score"] = 0
-        merged[key][score_type] = score
+            merged[key] = {**entry, "bm25_score": 0.0, "vector_score": 0.0}
+        merged[key][score_field] = float(entry.get(score_field, 0.0))
 
     for r in text_results:
-        add_or_update(r, r.get("bm25_score", 0), "bm25_score")
-
+        add(r, "bm25_score")
     for r in vector_results:
-        add_or_update(r, r.get("vector_score", 0), "vector_score")
+        add(r, "vector_score")
 
-    # Normalize scores to [0, 1] to combine fairly-ish
-    all_bm25 = [r.get("bm25_score", 0) for r in merged.values()]
-    all_vec = [r.get("vector_score", 0) for r in merged.values()]
-    max_bm25 = max(all_bm25 or [1])
-    max_vec = max(all_vec or [1])
-    epsilon = 0.0000001
+    # Normalize to [0,1]
+    all_bm25 = [v["bm25_score"] for v in merged.values()]
+    all_vec  = [v["vector_score"] for v in merged.values()]
+    max_bm25 = max(all_bm25) if all_bm25 else 1.0
+    max_vec  = max(all_vec)  if all_vec  else 1.0
+    eps = 1e-9
+    for v in merged.values():
+        nb = v["bm25_score"] / (max_bm25 + eps)
+        nv = v["vector_score"] / (max_vec + eps)
+        v["hybrid_score"] = 0.6 * nv + 0.4 * nb
 
-    for r in merged.values():
-        norm_bm25 = r.get("bm25_score", 0) / (max_bm25 + epsilon)
-        norm_vec = r.get("vector_score", 0) / (max_vec + epsilon)
-        # weighted combination: 0.6 vector + 0.4 keyword
-        r["hybrid_score"] = 0.6 * norm_vec + 0.4 * norm_bm25
-
-    # Step 5: Return Top 5 
     top5 = nlargest(5, merged.values(), key=lambda x: x["hybrid_score"])
 
-    # debug prints
-    # print("Hybrid top 5 (scores):")
-    # for i, doc in enumerate(top5, 1):
-    #     print(f"  {i}. hybrid={doc['hybrid_score']:.3f} | bm25={doc['bm25_score']:.3f} | vector={doc['vector_score']:.3f}")
-    #     print(f"     {doc.get('section_title') or '—'}")
-    #     print(f"     {doc.get('url') or ''}")
-    #     print()
-
     client.close()
+    # print("TOP 5:", top5)
     return top5

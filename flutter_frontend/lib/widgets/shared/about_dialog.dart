@@ -16,12 +16,12 @@ class AboutAppDialog extends StatelessWidget {
           color: Colors.blueGrey[900],
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: Colors.white.withOpacity(0.2),
+            color: const Color.fromRGBO(255, 255, 255, 0.2),
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              color: const Color.fromRGBO(0, 0, 0, 0.3),
               blurRadius: 20,
               offset: Offset(0, 10),
             ),
@@ -58,11 +58,11 @@ class AboutAppDialog extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.cyan.withOpacity(0.1),
+        color: const Color.fromRGBO(0, 188, 212, 0.1),
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         border: Border(
           bottom: BorderSide(
-            color: Colors.white.withOpacity(0.1),
+            color: const Color.fromRGBO(255, 255, 255, 0.1),
             width: 1,
           ),
         ),
@@ -90,7 +90,7 @@ class AboutAppDialog extends StatelessWidget {
                 Text(
                   'Municipal Law Assistant',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
+                    color: const Color.fromRGBO(255, 255, 255, 0.7),
                     fontSize: 14,
                   ),
                 ),
@@ -99,7 +99,7 @@ class AboutAppDialog extends StatelessWidget {
           ),
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
-            icon: Icon(Icons.close, color: Colors.white.withOpacity(0.7)),
+            icon: Icon(Icons.close, color: const Color.fromRGBO(255, 255, 255, 0.7)),
           ),
         ],
       ),
@@ -115,7 +115,7 @@ class AboutAppDialog extends StatelessWidget {
         Text(
           'Paralegal AI is your intelligent assistant for navigating municipal bylaws and regulations. Our system searches through thousands of official documents to provide you with accurate, relevant information about local laws and regulations.',
           style: TextStyle(
-            color: Colors.white.withOpacity(0.85),
+            color: const Color.fromRGBO(255, 255, 255, 0.85),
             fontSize: 15,
             height: 1.5,
           ),
@@ -151,7 +151,7 @@ class AboutAppDialog extends StatelessWidget {
                 child: Text(
                   feature.substring(2),
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
+                    color: const Color.fromRGBO(255, 255, 255, 0.8),
                     fontSize: 14,
                     height: 1.4,
                   ),
@@ -173,7 +173,7 @@ class AboutAppDialog extends StatelessWidget {
         Text(
           'Built with cutting-edge AI and retrieval technology:',
           style: TextStyle(
-            color: Colors.white.withOpacity(0.85),
+            color: const Color.fromRGBO(255, 255, 255, 0.85),
             fontSize: 15,
             height: 1.5,
           ),
@@ -198,10 +198,10 @@ class AboutAppDialog extends StatelessWidget {
           margin: const EdgeInsets.symmetric(vertical: 6),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
+            color: const Color.fromRGBO(255, 255, 255, 0.05),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: Colors.white.withOpacity(0.1),
+              color: const Color.fromRGBO(255, 255, 255, 0.1),
               width: 1,
             ),
           ),
@@ -231,7 +231,7 @@ class AboutAppDialog extends StatelessWidget {
                     Text(
                       tech['desc']!,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.6),
+                        color: const Color.fromRGBO(255, 255, 255, 0.6),
                         fontSize: 12,
                       ),
                     ),
@@ -254,10 +254,10 @@ class AboutAppDialog extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.cyan.withOpacity(0.1),
+            color: const Color.fromRGBO(0, 188, 212, 0.1),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Colors.cyan.withOpacity(0.2),
+              color: const Color.fromRGBO(0, 188, 212, 0.2),
               width: 1,
             ),
           ),
@@ -265,7 +265,7 @@ class AboutAppDialog extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 24,
-                backgroundColor: Colors.cyan.withOpacity(0.2),
+                backgroundColor: const Color.fromRGBO(0, 188, 212, 0.2),
                 child: Icon(
                   Icons.person,
                   color: Colors.cyan,
@@ -288,7 +288,7 @@ class AboutAppDialog extends StatelessWidget {
                     Text(
                       'AI Developer & Legal Tech Enthusiast',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
+                        color: const Color.fromRGBO(255, 255, 255, 0.7),
                         fontSize: 14,
                       ),
                     ),
@@ -302,7 +302,7 @@ class AboutAppDialog extends StatelessWidget {
         Text(
           'Passionate about making legal information more accessible through technology. This project aims to bridge the gap between complex municipal regulations and everyday citizens.',
           style: TextStyle(
-            color: Colors.white.withOpacity(0.8),
+            color: const Color.fromRGBO(255, 255, 255, 0.8),
             fontSize: 14,
             height: 1.5,
           ),
@@ -353,12 +353,12 @@ class AboutAppDialog extends StatelessWidget {
         ),
         style: TextButton.styleFrom(
           foregroundColor: Colors.cyan,
-          backgroundColor: Colors.cyan.withOpacity(0.1),
+          backgroundColor: const Color.fromRGBO(0, 188, 212, 0.1),
           padding: const EdgeInsets.symmetric(vertical: 8),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
             side: BorderSide(
-              color: Colors.cyan.withOpacity(0.3),
+              color: const Color.fromRGBO(0, 188, 212, 0.3),
               width: 1,
             ),
           ),
@@ -382,7 +382,7 @@ class AboutAppDialog extends StatelessWidget {
   Future<void> _launchUrl(String urlString) async {
     final Uri url = Uri.parse(urlString);
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      print('Could not launch $urlString');
+      
     }
   }
 }

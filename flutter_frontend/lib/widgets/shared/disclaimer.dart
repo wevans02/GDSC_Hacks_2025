@@ -15,7 +15,7 @@ class DisclaimerFooter extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.3),
+        color: const Color.fromRGBO(0, 0, 0, 0.3),
         border: Border(
           top: BorderSide(
             color: Colors.white.withOpacity(0.1),
@@ -132,7 +132,7 @@ class _FullDisclaimerDialog extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              color: const Color.fromRGBO(0, 0, 0, 0.3),
               blurRadius: 20,
               offset: Offset(0, 10),
             ),
@@ -145,7 +145,7 @@ class _FullDisclaimerDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.3),
+                color: const Color.fromRGBO(0, 0, 0, 0.3),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                 border: Border(
                   bottom: BorderSide(

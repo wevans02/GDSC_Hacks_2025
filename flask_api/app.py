@@ -37,8 +37,8 @@ import json
 import os
 
 # RAG utils
-import flask_api.rag_pipeline.get_explanation as get_explanation
-from flask_api.rag_pipeline.embed_and_query import query_hybrid
+import rag_pipeline.get_explanation as get_explanation
+from rag_pipeline.embed_and_query import query_hybrid
 
 # Our utilities
 from utils.config import ALLOWED_URLS, DB_NAME
@@ -147,6 +147,8 @@ def handle_query():
             db_name=db_name,
             col_name=col_name,
         )
+
+        # print("DB RESULT: ", results)
     except Exception as e:
         results = []
         vector_err = str(e)
@@ -195,19 +197,32 @@ def handle_query():
 
     # combine found DB chunks to one string
     context_text = "\n\n---\n\n".join(
-        [chunk.get("chunk_text", "") for chunk in results if chunk.get("chunk_text")]
+        [chunk.get("combined_text", "") for chunk in results if chunk.get("combined_text")]
     )
 
+    # print("\n\nCONTEXT CHUNKS::\n\n\n: ", context_text)
+
     # get the info for each city, slightly different for now
-    if city == "Toronto":
-        source_info = [{"title": c.get("title"),
-                        "bylaw_id": c.get("original_bylaw_id"),
-                        "pdf_url": c.get("pdf_url")} for c in results]
-    else:
-        # Waterloo & Guelph normalized to these keys
-        source_info = [{"title": c.get("bylaw_title"),
-                        "bylaw_id": c.get("bylaw_id"),
-                        "pdf_url": c.get("url")} for c in results]
+    print("[INFO] found for waterloo")
+    source_info = []
+    for chunk in results:
+        pages = chunk.get("page_numbers")
+        page_display = None
+        if isinstance(pages, list) and len(pages) > 0:
+            # take first if single page, or show range if multiple
+            if len(pages) == 1:
+                page_display = f"p.{pages[0]}"
+            else:
+                page_display = f"pp.{pages[0]}–{pages[-1]}"
+        elif isinstance(pages, (int, float)):
+            page_display = f"p.{int(pages)}"
+
+        source_info.append({
+            "title": chunk.get("section_title") or chunk.get("page_title") or "Waterloo Bylaw",
+            "bylaw_id": chunk.get("bylaw_id") or "",
+            "pdf_url": chunk.get("url") or "",
+            "page_numbers": page_display
+        })
 
     # create context from past messages
     conversation_context_text = "\n".join(

@@ -34,13 +34,9 @@ DB_LOGIN = os.getenv("DATABASE_LOGIN")
 # ========================================================
 # CORS, yeah there may be a more efficient way to manage the localhost mkay
 ALLOWED_URLS = [
-    "http://localhost:59259",
-    "http://localhost:58722",
-    "http://localhost:56703",
+    "http://localhost:60117",
     "https://gdsc-2025.firebaseapp.com",
     "https://gdsc-2025.web.app",
     "https://paralegalbylaw.org",
     "https://api.paralegalbylaw.org",
-    "http://localhost:55974",
-    "http://localhost:58150",
 ]

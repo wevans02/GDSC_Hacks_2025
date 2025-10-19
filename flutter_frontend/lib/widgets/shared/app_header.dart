@@ -1,6 +1,6 @@
 // widgets/app_header.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_frontend/widgets/about_page.dart';
+import 'package:flutter_frontend/widgets/shared/about_page.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;

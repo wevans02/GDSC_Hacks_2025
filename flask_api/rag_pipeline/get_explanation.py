@@ -61,7 +61,7 @@ Instructions:
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",   # or "gpt-4o" for higher accuracy
+            model="gpt-4o",   # or "gpt-4o" for higher accuracy
             messages=[
                 {"role": "system", "content": "You are a precise legal chatbot named Paralegal."},
                 {"role": "user", "content": prompt},

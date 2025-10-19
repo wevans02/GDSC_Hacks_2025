@@ -25,6 +25,7 @@ import io                           # For PDF byte streams
 import hashlib                      # For potential hashing (if needed)
 import requests                     # For HTTP requests (PDFs, API calls)
 from typing import List, Dict       # For type hints
+import regex as re
 
 # ----------------------------
 # Third-Party Libraries
@@ -39,51 +40,82 @@ from crawl4ai.extraction_strategy import LLMExtractionStrategy  # For LLM-based 
 # ----------------------------
 load_dotenv()                      # Load environment variables from .env
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # OpenAI API key
-GPT_MODEL = "gpt-4o-mini"          # Default model for extraction
+GPT_MODEL = "gpt-5-mini"          # Default model for extraction
 
+# number of pages to scrape
+MAX_PAGES=300
 
 # TUNABLE EXTRACTION PROMPT
 # This is where you control what gets extracted and how it's chunked
 EXTRACTION_PROMPT = """
-You are an expert data extractor for a Retrieval-Augmented Generation (RAG) system focused on municipal information for the City of Toronto (bylaws, parking, city services, etc.). Your output will be used directly to create embeddings for a vector database.
+You are extracting municipal bylaw content for a RAG system.
 
-Your task:
-1.  Analyze the provided webpage to determine if it contains useful municipal information (e.g., bylaws, regulations, services, procedures, fees, contact info).
-2.  If the page is NOT useful (e.g., a simple navigation page, an empty page, an irrelevant form), you MUST return: {"relevant": false, "reason": "Provide a brief explanation for why the page is not relevant."}
-3.  If the page IS useful, you must extract the content into logical, self-contained chunks based on the page's structure and topics.
+Each chunk MUST be self-contained and must NOT rely on seeing any other chunk.
 
-CRITICAL RULES FOR EXTRACTION:
--   **ACCURACY IS PARAMOUNT**: The extracted data is the foundation of the RAG system. Do not include any information that is not explicitly present in the provided text.
--   **PRESERVE VERBATIM TEXT**: All extracted text must be an exact copy from the webpage. Do not paraphrase, summarize, or reword the original content. Maintain all original formatting, including tables and lists.
--   **CHUNK LOGICALLY**: Group related information into a single chunk. For example, rules for parking on a specific street, details about a city service and how to book it, or a single bylaw's section should each be one chunk. Create separate chunks for different services, bylaws, or distinct topics.
--   **SELF-CONTAINED CHUNKS**: Each chunk must be understandable on its own without requiring information from other chunks.
+RULES
+- Do NOT invent facts. Preserve bylaw text VERBATIM in `text`.
+- Prefer whole sections as chunks. If a section is long, split at natural boundaries (subsections, numbered clauses, topic changes).
+- Target 200-500 words per chunk; max 800; min 50 (merge tiny fragments if needed).
+- If a clause depends on another clause that is NOT included in the chunk, set `requires_context=true` and list the referenced sections in `cross_refs`.
 
-For each useful page, provide a JSON output with the following structure. For each chunk, you will provide:
--   "text": **Verbatim Content**: The EXACT verbatim text from the page.
--   "contextual_summary": A short, succinct sentence to situate the chunk within the overall document. Summarize or make clear anything that the chunk refers to that is outside the chunk.
-    Example format: "This chunk details overnight parking regulations. Overnight parking is not permitted on city streets between 2:30 a.m. and 6:00 a.m. unless you have registered your vehicle for an exemption."
--   "section_title": The most relevant heading or topic for this chunk of text (e.g., "Overnight Parking Exemptions", "Garbage Collection Schedule").
--   "content_type": The type of information in the chunk. Choose from: bylaw, regulation, service_description, procedure, fee_schedule, contact_info, public_notice, meeting_minutes, general_info.
+DE-REFERENCING (without editing the text)
+- When the text says “this bylaw,” “herein,” “section X,” etc., do NOT change `text`.
+- Instead, write a brief `contextual_summary` explaining what those references point to (based only on the provided page).
 
-OUTPUT JSON FORMAT:
+OUTPUT
+Return ONLY JSON (no Markdown, no commentary) with this exact schema:
+
 {
-  "relevant": true,
-  "page_title": "Page title from the webpage",
-  "page_type": "bylaw|regulation|service|general_info|etc",
+  "relevant": boolean,
+  "reason": string | null,                 // if relevant=false, say why briefly
+  "page_title": string,
+  "bylaw_number": string | null,
+  "primary_subject": "parking" | "traffic" | "pool_enclosures" | "trees" | "noise" | "property_standards" | "animals" | "zoning" | "water_backflow" | "business_licensing" | "waste" | "signage" | "other",
+  "applies_to": string | null,             // e.g., "City of Waterloo" or "unspecified"
+  "subject_tags": string[],                // short tags, 1-5 items
   "chunks": [
     {
-      "text": "Verbatim text from the page...",
-      "contextual_summary" : "succinct, contextual summary here."
-      "section_title": "Section heading or topic",
-      "content_type": "service_description",
+      "section_title": string | null,
+      "section_path": string | null,       // e.g., "§21 → 21.3"
+      "content_type": "bylaw" | "regulation" | "procedure" | "fee_schedule" | "contact_info" | "general_info",
+      "requires_context": boolean,
+      "cross_refs": string[],              // e.g., ["19.1", "18(2)"]; [] if none
+      "contextual_summary": string,        // 1-2 sentences. MUST start: "From {page_title} ({primary_subject}) — Scope: {applies_to or 'unspecified'}. Section: {section_path or 'n/a'}."
+      "text": string                       // VERBATIM law text
     }
   ]
 }
 
-Your final output must be ONLY the raw, valid JSON.
-
-NOW EXTRACT FROM THIS PAGE:
+CONSTRAINTS
+- Keep `contextual_summary` short and factual (no restating the full text).
+- If the page is not a bylaw/regulation (e.g., news, contact-only), return `"relevant": false` with a short reason.
+- Output MUST be valid JSON. No trailing commas, no extra keys.
 """
+
+def needs_reasoning(page_text: str, draft_meta) -> bool:
+    # A) cross-ref density
+    refs = re.findall(r'\b(section|§|subject to|notwithstanding|despite|except as provided)\b', page_text, flags=re.I)
+    if len(refs) >= 5:
+        return True
+
+    # B) nested numbering patterns
+    if re.search(r'\b\d+(\.\d+){2,}', page_text):  # 1.2.3 or deeper
+        return True
+
+    # C) schedules / tables keywords
+    if re.search(r'\b(schedule|appendix|fee table|table\s+\d+)\b', page_text, flags=re.I):
+        return True
+
+    # D) exception chains
+    if len(re.findall(r'\b(despite|notwithstanding|however|except)\b', page_text, flags=re.I)) >= 6:
+        return True
+
+    # E) fallback from a quick dry-run validator (e.g., bad JSON twice)
+    if draft_meta.get("json_failures", 0) >= 2 or draft_meta.get("many_requires_context", False):
+        return True
+
+    return False
+
 
 # this function is called when we hit a pdf, special pipleine to handle pdfs
 # at the end, the result is funneled into the same json as the html pages end up as. 
@@ -149,7 +181,7 @@ NOW EXTRACT FROM THE FOLLOWING PDF PAGES ({batch_start}-{batch_end}):
 
         try:
             llm_response = requests.post(
-                "https://api.openai.com/v1/chat/completions",
+                "https://api.openai.com/v1/responses",
                 headers={
                     "Content-Type": "application/json",
                     "Authorization": f"Bearer {OPENAI_API_KEY}",
@@ -177,6 +209,10 @@ NOW EXTRACT FROM THE FOLLOWING PDF PAGES ({batch_start}-{batch_end}):
             print("llm resonse: ", llm_response.json()["choices"][0]["message"]["content"])
             continue
 
+    timestamp = datetime.now().strftime("%H%M%S")
+    filename = f"{hash(url) % 100000:05d}_{timestamp}.json"
+    filepath = os.path.join(output_dir, filename)
+
     # 4. Combine + save
     output = {
         "url": url,
@@ -192,8 +228,8 @@ NOW EXTRACT FROM THE FOLLOWING PDF PAGES ({batch_start}-{batch_end}):
         "filename": os.path.basename(url),
     }
 
-    filename = f"{hash(url) % 100000:05d}.json"
-    filepath = os.path.join(output_dir, filename)
+    # filepath = f"{hash(url) % 100000:05d}.json"
+    # filepath = os.path.join(output_dir, filename)
     with open(filepath, "w", encoding="utf-8") as f:
         json.dump(output, f, indent=2, ensure_ascii=False)
 
@@ -218,28 +254,25 @@ async def scrape_with_llm_extraction(
     visited = set()
     queue = [(0, start_url)]  # (priority, url) for best-first search
 
-    # quality debugging
-    # print("WHAHHA:", os.environ.get("OPENAI_API_KEY"))
-    
-    # uses gpt 4 with promt to extract context. needs a valid and paid api key
+    # FIX: Use the correct model name - you had "gpt-4o-mini" but defined GPT_MODEL as "gpt-5-mini"
     extraction_strategy = LLMExtractionStrategy(
         llm_config=LLMConfig(
-            provider="openai/gpt-4o-mini",
+            provider=f"openai/{GPT_MODEL}",  # Use your defined model
             api_token=os.environ.get("OPENAI_API_KEY"),
             temperature=0.1,
         ),
         instruction=EXTRACTION_PROMPT,
+        
     )
     
-    # setup crawling, Passing caching for now but maybe we can come back to it.
+    # setup crawling
     config = CrawlerRunConfig(
         cache_mode=CacheMode.BYPASS,
         extraction_strategy=extraction_strategy,
-        # min 10 words, else we skip
         word_count_threshold=10,
+        
     )
     
-    # rubn the crawler - best first search priority
     async with AsyncWebCrawler() as crawler:
         while queue and len(visited) < max_pages:
             # Get next URL (best-first if enabled, otherwise FIFO)
@@ -256,74 +289,85 @@ async def scrape_with_llm_extraction(
             
             try:
                 result = await crawler.arun(url, config=config)
-                # print("POUTPUT", result.url)
-                # print("TYPE", type(result))
                 
                 if not result.success:
                     print(f"  ❌ Failed to fetch")
                     continue
 
-                # Parse extracted content
-                extracted = json.loads(result.extracted_content)
-                
-                # if url ends with pdf, handle separately
-
-                # go through each part
-                # if relevant, write the chunk:
-                # write chunk with: URL, 
-
-                # for now we save them.
+                # Handle PDFs separately
                 if result.url.endswith(".pdf"):
                     await scrape_pdf_with_llm(result.url)
                     continue
+                
+                # FIX: Combine ALL chunks from ALL documents on this page into one file
+                parsed_extracted = json.loads(result.extracted_content)
+                
+                # Handle case where extracted_content is a single document or list of documents
+                if isinstance(parsed_extracted, dict):
+                    documents = [parsed_extracted]
                 else:
-                    # extrscted is a list of json
-                    for document in extracted:
-                        if not document.get("relevant", False):
-                            reason = document.get("reason", "Unknown")
-                            print(f"Not relevant: {reason}")
-                        else:
-                            chunks = document.get("chunks", [])
-                            print(f"Extracted {len(chunks)} chunks")
-
-                            # Add URL and timestamp to this document
-                            document["url"] = url
-                            document["scraped_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-                            # Save this document
-                            filename = f"{hash(url) % 100000:05d}.json"
-                            filepath = os.path.join(output_dir, filename)
-
-                            with open(filepath, "w", encoding="utf-8") as f:
-                                json.dump(document, f, indent=2, ensure_ascii=False)
-
-                            print(f"  💾 Saved to {filename}")
-
-                            if chunks:
-                                preview = chunks[0]["text"][:100]
-                                print(f"  📄 Preview: {preview}")
-
+                    documents = parsed_extracted
+                
+                all_chunks_from_page = []
+                relevant_document_count = 0
+                
+                for document in documents:
+                    if document.get("relevant", False):
+                        chunks = document.get("chunks", [])
+                        all_chunks_from_page.extend(chunks)
+                        relevant_document_count += 1
+                        print(f"  ✅ Relevant document with {len(chunks)} chunks")
+                    else:
+                        reason = document.get("reason", "Unknown")
+                        print(f"  ❌ Not relevant: {reason}")
+                
+                # Only save if we found relevant chunks
+                if all_chunks_from_page:
+                    output_document = {
+                        "url": url,
+                        "scraped_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "total_chunks": len(all_chunks_from_page),
+                        "relevant_documents": relevant_document_count,
+                        "chunks": all_chunks_from_page
+                    }
                     
-                    # Extract links for crawling
-                    new_links = extract_links(result.html, url)
-                    added = 0
+                    # Create unique filename with timestamp
+                    timestamp = datetime.now().strftime("%H%M%S")
+                    filename = f"{hash(url) % 100000:05d}_{timestamp}.json"
+                    filepath = os.path.join(output_dir, filename)
                     
-                    for link in new_links:
-                        if link not in visited and link not in [u for _, u in queue]:
-                            # Calculate priority based on keywords in URL
-                            priority = calculate_priority(link, keywords) if use_best_first else 0
-                            queue.append((priority, link))
-                            added += 1
+                    with open(filepath, "w", encoding="utf-8") as f:
+                        json.dump(output_document, f, indent=2, ensure_ascii=False)
                     
-                    print(f"Found {added} new links (queue: {len(queue)})")
+                    print(f"  💾 Saved {len(all_chunks_from_page)} total chunks to {filename}")
+                    
+                    # Show preview of first few chunks
+                    for i, chunk in enumerate(all_chunks_from_page[:3]):
+                        preview = chunk["text"][:100] + "..." if len(chunk["text"]) > 100 else chunk["text"]
+                        print(f"  📄 Chunk {i+1}: {preview}")
+                else:
+                    print(f"  ⚠️  No relevant chunks found on this page")
+                
+                # Extract links for crawling
+                new_links = extract_links(result.html, url)
+                added = 0
+                
+                for link in new_links:
+                    if link not in visited and link not in [u for _, u in queue]:
+                        priority = calculate_priority(link, keywords) if use_best_first else 0
+                        queue.append((priority, link))
+                        added += 1
+                
+                print(f"  🔗 Found {added} new links (queue: {len(queue)})")
                 
             except Exception as e:
-                print(f"  ❌ Error: {e}")
+                print(f"  ❌ Error processing {url}: {e}")
+                import traceback
+                traceback.print_exc()
             
             await asyncio.sleep(0.5)
     
     print(f"\n✅ Crawled {len(visited)} pages")
-
 
 def extract_links(html: str, base_url: str) -> List[str]:
     """Extract valid links from HTML."""
@@ -393,9 +437,10 @@ async def main():
     
     await scrape_with_llm_extraction(
         start_url=start_url,
-        max_pages=1500,
+        max_pages=MAX_PAGES,
         use_best_first=True,  # Set False for breadth-first search
-        keywords=keywords
+        keywords=keywords,
+        output_dir=os.getenv("EXTRACTED_DIR")
     )
     
     print("\n✅ Done! Check the 'llm_extracted_data_toronto' folder for results.")

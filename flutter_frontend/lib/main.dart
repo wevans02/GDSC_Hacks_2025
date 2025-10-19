@@ -8,21 +8,23 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:ui'; // Required for ImageFilter.blur
 import 'package:flutter_animate/flutter_animate.dart'; // Import flutter_animate
 import 'package:loading_animation_widget/loading_animation_widget.dart'; // Import loading widget
-import 'widgets/app_header.dart';
+import 'widgets/shared/app_header.dart';
 // import 'widgets/about_dialog.dart';
-import 'widgets/info_section.dart';
-import 'widgets/about_dialog.dart' as deprecated_about;
-import 'widgets/about_page.dart';
-import 'widgets/disclaimer.dart';
-import 'widgets/title_text.dart';
+import 'widgets/shared/info_section.dart';
+import 'widgets/shared/about_dialog.dart' as deprecated_about;
+import 'widgets/shared/about_page.dart';
+import 'widgets/shared/disclaimer.dart';
+import 'widgets/shared/title_text.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart';
+
 
 // --- Constants (Keep these the same) ---
 Color kBgDark = Colors.grey[900]!;
 const Color kBgLight = Color(0xFF3F51B5); // Indigo
 const Color kAccentColor = Color(0xFF00BCD4); // Cyan
 const Color kUserBubbleColor = Color(0x77FFFFFF); // Semi-transparent white
-const Color kAiBubbleColor = Color(0x55000000); // Semi-transparent dark
+const Color kAiBubbleColor = Colors.transparent;//(0x55000000); // Semi-transparent dark
 const Color kTextColor = Colors.white;
 const Color kSourceChipColor = Color(0xFFB2EBF2); // Light Cyan
 const Color kSourceChipTextColor = Colors.black87;
@@ -448,7 +450,7 @@ class _MyHomePageState extends State<MyHomePage> {
     return KeyedSubtree(
       key: ValueKey('ChatView-${_selectedCity}-$_chatEpoch'),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+          padding: const EdgeInsets.symmetric(horizontal: 0.0, vertical: 0.0),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: ChatWindow(
@@ -499,11 +501,39 @@ class _ChatWindowState extends State<ChatWindow> {
   bool _canSend = true;
   static const _cooldown = Duration(seconds: 3);
 
+  /// Horizontal, iMessage-like source previews (uniform size, side-scroll, no wrap).
+Widget _buildSourcesStrip(BuildContext context, List<Map<String, dynamic>> sources) {
+  final sourcesToDisplay = sources.take(8).toList(); // show up to 8
+
+  return Padding(
+    padding: const EdgeInsets.only(top: 10.0, left: 32.0),
+    child: SizedBox(
+      height: 150, // fixed height for uniform cards
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: sourcesToDisplay.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, i) {
+          return _SourceCard(
+            source: sourcesToDisplay[i],
+            onTap: () {
+              final url = (sourcesToDisplay[i]['pdf_url'] ?? '').toString();
+              if (url.isNotEmpty) _launchUrl(url);
+            },
+          );
+        },
+      ),
+    ),
+  );
+}
+
+
   Widget _introMessage(String city) {
     return RichText(
       text: TextSpan(
         style: TextStyle(
-          fontSize: 16,
+          fontSize: 18,
           color: Colors.white,
           height: 1.4,
         ),
@@ -750,7 +780,7 @@ class _ChatWindowState extends State<ChatWindow> {
  Widget _buildMessageItem(BuildContext context, ChatMessage message) {
     final bool isUser = message.fromMe;
     final alignment = isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
-    final marginEdge = isUser ? EdgeInsets.only(left: 40.0) : EdgeInsets.only(right: 40.0);
+    final marginEdge = isUser ? EdgeInsets.only(left: 40.0) : EdgeInsets.only(right: 0.0);
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8.0).add(marginEdge),
@@ -761,10 +791,10 @@ class _ChatWindowState extends State<ChatWindow> {
              mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
              crossAxisAlignment: CrossAxisAlignment.start,
              children: [
-                if (!isUser) ...[
-                  Icon(Icons.description, color: kAccentColor.withOpacity(0.8), size: 24),
-                  const SizedBox(width: 8),
-                ],
+                // if (!isUser) ...[
+                //   //Icon(Icons.description, color: kAccentColor.withOpacity(0.8), size: 24),
+                //   const SizedBox(width: 8),
+                // ],
 
                 Flexible(
                    child: _buildMessageBubble(context, message)
@@ -777,11 +807,16 @@ class _ChatWindowState extends State<ChatWindow> {
               ],
            ),
            if (!isUser && message.sources != null && message.sources!.isNotEmpty && !message.isLoading)
-              _buildSourcesSection(context, message.sources!),
+              _SourcesStrip(
+                sources: message.sources!,
+                onOpenUrl: _launchUrl,
+              ),
         ],
       ),
     );
  }
+
+ 
 
   Widget _buildMessageBubble(BuildContext context, ChatMessage message) {
     final bool isUser = message.fromMe;
@@ -806,7 +841,7 @@ class _ChatWindowState extends State<ChatWindow> {
             borderRadius: borderRadius,
           ),
           child: message.isLoading
-              ? const Center(child: LoadingMessage())
+              ? LoadingMessage()
               : introCity != null
                   ? _introMessage(introCity) // render the gradient intro
                   : MarkdownBody(
@@ -847,21 +882,24 @@ class _ChatWindowState extends State<ChatWindow> {
    );
  }
 
- Widget _buildSourceChip(BuildContext context, Map<String, dynamic> source) {
-   final String title = source['title'] ?? 'Source';
-   final String bylawId = source['bylaw_id']?.replaceFirst('Chapter ', '') ?? '';
-   final String pdfUrl = source['pdf_url'] ?? '';
-   final displayId = bylawId.isNotEmpty ? "($bylawId)" : "";
-   final displayText = "$title $displayId".trim();
+Widget _buildSourceChip(BuildContext context, Map<String, dynamic> source) {
+  final String title = source['title'] ?? 'Source';
+  final String bylawId = source['bylaw_id']?.replaceFirst('Chapter ', '') ?? '';
+  final String pdfUrl = source['pdf_url'] ?? '';
+  final String pageNum = source['page_numbers'] ?? '';
+  final displayId = bylawId.isNotEmpty ? "($bylawId)" : "";
+  final displayPage = pageNum.isNotEmpty ? " – $pageNum" : ""; // e.g. " – p.12"
+  final displayText = "$title $displayId$displayPage".trim();
 
-   return ActionChip(
-    color: WidgetStatePropertyAll(Colors.white.withAlpha(200)),
-     avatar: Icon(Icons.link, size: 16, color: kSourceChipTextColor.withOpacity(0.8)),
-     label: Text(displayText),
-     tooltip: 'Open source: $displayText',
-     onPressed: pdfUrl.isNotEmpty ? () => _launchUrl(pdfUrl) : null,
-   );
- }
+  return ActionChip(
+    color: const WidgetStatePropertyAll(Colors.white70),
+    avatar: Icon(Icons.link, size: 16, color: kSourceChipTextColor.withOpacity(0.8)),
+    label: Text(displayText),
+    tooltip: 'Open source: $displayText',
+    onPressed: pdfUrl.isNotEmpty ? () => _launchUrl(pdfUrl) : null,
+  );
+}
+
 
 
  Widget _buildInputArea(BuildContext context) {
@@ -869,25 +907,34 @@ class _ChatWindowState extends State<ChatWindow> {
      child: BackdropFilter(
        filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
        child: Container(
-         padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 10.0).copyWith(bottom: 20),
+         padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 10.0).copyWith(bottom: 10),
         //  decoration: BoxDecoration(
         //    color: Colors.black.withOpacity(0.2),
         //  ),
          child: Row(
            children: [
              Expanded(
-               child: TextField(
-                 controller: _input,
-                 onSubmitted: (_) => _send(),
-                 style: TextStyle(color: kTextColor),
-                 decoration: const InputDecoration(
-                   hintText: 'Ask a question...',
-                 ),
-                 inputFormatters: [
-                  LengthLimitingTextInputFormatter(500), // max 50 chars
-                ],
-               ),
-             ),
+                child: TextField(
+                  onChanged: (String value) {
+                    // Check if sending is allowed and the input isn't empty after trimming
+                    if (_canSend && value.trim().isNotEmpty && value.endsWith("\n")) {
+                      _send();
+                    }
+                  },
+                  controller: _input,
+                  maxLines: null,
+                  keyboardType: TextInputType.multiline,
+                  style: TextStyle(color: kTextColor),
+                  decoration: const InputDecoration(
+                    hintText: 'Ask a question...',
+                  ),
+                  inputFormatters: [
+                    LengthLimitingTextInputFormatter(500),
+                  ],
+                  
+                ),
+              ),
+
              const SizedBox(width: 10),
              IconButton(
                icon: AnimatedSwitcher(
@@ -971,6 +1018,333 @@ class _LoadingMessageState extends State<LoadingMessage> {
             color: kAccentColor,
             fontStyle: FontStyle.italic,
           ),
+    );
+  }
+}
+
+
+
+/// Single source card with top image, fading one-line title, and optional page numbers.
+class _SourceCard extends StatelessWidget {
+  final Map<String, dynamic> source;
+  final VoidCallback? onTap;
+
+  const _SourceCard({required this.source, this.onTap});
+
+  bool get _isPdf {
+    final url = (source['pdf_url'] ?? '').toString().toLowerCase();
+    return url.endsWith('.pdf') || url.contains('.pdf?');
+  }
+  String get _faviconUrl {
+    final raw = (source['pdf_url'] ?? source['url'] ?? '').toString();
+    final uri = Uri.tryParse(raw);
+    final domain = (uri?.host.isNotEmpty ?? false) ? uri!.host : raw;
+    // Stable favicon endpoint (small and fast)
+    return 'https://www.google.com/s2/favicons?sz=128&domain_url=$domain';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final String title = (source['title'] ?? 'Source').toString();
+    final String page = (source['page_numbers'] ?? '').toString().trim(); // e.g., "p.7"
+    final String bylawId = (source['bylaw_id'] ?? '').toString();
+    final displaySubtitle = [
+      if (bylawId.isNotEmpty) bylawId.replaceFirst('Chapter ', ''),
+      if (page.isNotEmpty) page,
+    ].join(' • ');
+
+    return SizedBox(
+      width: 220, // medium/small card width for mobile friendliness
+      child: Material(
+        color: Colors.white.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          splashColor: Colors.white.withOpacity(0.08),
+          highlightColor: Colors.white.withOpacity(0.04),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top "image" area: gradient background + favicon centered.
+              SizedBox(
+                height: 90,
+                width: double.infinity,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Soft gradient background so the card feels rich even if favicon fails.
+                    Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xAA00BCD4), Color(0x6640E0D0)],
+                        ),
+                      ),
+                    ),
+                    // Favicon as the "image"
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(10.0),
+                        child: Image.network(
+                          _faviconUrl,
+                          width: 44,
+                          height: 44,
+                          errorBuilder: (_, __, ___) => Icon(
+                            _isPdf ? Icons.picture_as_pdf_rounded : Icons.public_rounded,
+                            size: 40,
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // PDF badge (visual hint)
+                    if (_isPdf)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.35),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            'PDF',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              // Bottom text area: one-line fading title + optional page/bylaw line.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                        // height: 1,
+                      ),
+                    ),
+
+                    if (displaySubtitle.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        displaySubtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.white.withOpacity(0.8),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+/// Enables mouse-drag scrolling on web and touch drag on mobile.
+class _DragScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.invertedStylus,
+        PointerDeviceKind.unknown,
+      };
+}
+
+/// Horizontal strip with arrows, drag-to-scroll, and edge fades.
+class _SourcesStrip extends StatefulWidget {
+  final List<Map<String, dynamic>> sources;
+  final void Function(String url) onOpenUrl;
+
+  const _SourcesStrip({
+    super.key,
+    required this.sources,
+    required this.onOpenUrl,
+  });
+
+  @override
+  State<_SourcesStrip> createState() => _SourcesStripState();
+}
+
+class _SourcesStripState extends State<_SourcesStrip> {
+  final _ctrl = ScrollController();
+
+  // Tunables should match your card + spacing
+  static const double _cardWidth = 220;
+  static const double _cardGap = 10;
+  static const double _cardHeight = 150;
+
+  bool _canLeft = false;
+  bool _canRight = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl.addListener(_updateCanScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateCanScroll());
+  }
+
+  @override
+  void dispose() {
+    _ctrl.removeListener(_updateCanScroll);
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _updateCanScroll() {
+    if (!mounted || !_ctrl.hasClients) return;
+    final pos = _ctrl.position;
+    final left = pos.extentBefore > 2;
+    final right = pos.extentAfter > 2;
+    if (left != _canLeft || right != _canRight) {
+      setState(() {
+        _canLeft = left;
+        _canRight = right;
+      });
+    }
+  }
+
+  Future<void> _scrollBy(double delta) async {
+    if (!_ctrl.hasClients) return;
+    final pos = _ctrl.position;
+    final target = (pos.pixels + delta).clamp(pos.minScrollExtent, pos.maxScrollExtent);
+    await _ctrl.animateTo(
+      target,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sourcesToDisplay = widget.sources.take(8).toList();
+    // Scroll by ~3 cards at a time
+    final double pageDelta = 3 * (_cardWidth + _cardGap);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10.0, left: 32.0),
+      child: SizedBox(
+        height: _cardHeight,
+        child: Stack(
+          children: [
+           
+            // The scrollable row
+            ScrollConfiguration(
+              behavior: _DragScrollBehavior(),
+              child: ListView.separated(
+                controller: _ctrl,
+                scrollDirection: Axis.horizontal,
+                physics: const ClampingScrollPhysics(), // smooth + precise on web
+                itemCount: sourcesToDisplay.length,
+                separatorBuilder: (_, __) => const SizedBox(width: _cardGap),
+                itemBuilder: (context, i) {
+                  final src = sourcesToDisplay[i];
+                  return _SourceCard(
+                    source: src,
+                    onTap: () {
+                      final url = (src['pdf_url'] ?? src['url'] ?? '').toString();
+                      if (url.isNotEmpty) widget.onOpenUrl(url);
+                    },
+                  );
+                },
+              ),
+            ),
+
+            // Left arrow
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              child: AnimatedOpacity(
+                opacity: _canLeft ? 1 : 0,
+                duration: const Duration(milliseconds: 180),
+                child: Center(
+                  child: _NavButton(
+
+                    icon: Icons.arrow_back_ios_new_rounded,
+
+                    onTap: _canLeft ? () => _scrollBy(-pageDelta) : null,
+                  ),
+                ),
+              ),
+            ),
+
+            // Right arrow
+            Positioned(
+              right: 0,
+              top: 0,
+              bottom: 0,
+              child: AnimatedOpacity(
+                opacity: _canRight ? 1 : 0,
+                duration: const Duration(milliseconds: 180),
+                child: Center(
+                  child: _NavButton(
+                    icon: Icons.arrow_forward_ios_rounded,
+                    onTap: _canRight ? () => _scrollBy(pageDelta) : null,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  const _NavButton({required this.icon, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withOpacity(0.6),
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: Icon(
+            icon,
+            size: 18,
+            color: onTap == null ? Colors.white30 : Colors.white,
+          ),
+        ),
+      ),
     );
   }
 }

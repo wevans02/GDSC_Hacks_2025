@@ -104,6 +104,8 @@ def log_event(
         "other_logs": other_logs or {},
     }
 
+    print('[INFO] Logging: ', payload)
+
     # local JSONL
     _append_to_local_jsonl(payload)
 
