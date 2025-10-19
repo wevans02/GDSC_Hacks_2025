@@ -1,27 +1,27 @@
 import 'package:flutter/material.dart';
 
 class SourceCard extends StatelessWidget {
+  const SourceCard({super.key, required this.source, this.onTap});
+
   final Map<String, dynamic> source;
   final VoidCallback? onTap;
-
-  const SourceCard({super.key, required this.source, this.onTap});
 
   bool get _isPdf {
     final url = (source['pdf_url'] ?? '').toString().toLowerCase();
     return url.endsWith('.pdf') || url.contains('.pdf?');
   }
+
   String get _faviconUrl {
     final raw = (source['pdf_url'] ?? source['url'] ?? '').toString();
     final uri = Uri.tryParse(raw);
     final domain = (uri?.host.isNotEmpty ?? false) ? uri!.host : raw;
-    // Stable favicon endpoint (small and fast)
     return 'https://www.google.com/s2/favicons?sz=128&domain_url=$domain';
   }
 
   @override
   Widget build(BuildContext context) {
     final String title = (source['title'] ?? 'Source').toString();
-    final String page = (source['page_numbers'] ?? '').toString().trim(); // e.g., "p.7"
+    final String page = (source['page_numbers'] ?? '').toString().trim();
     final String bylawId = (source['bylaw_id'] ?? '').toString();
     final displaySubtitle = [
       if (bylawId.isNotEmpty) bylawId.replaceFirst('Chapter ', ''),
@@ -29,7 +29,7 @@ class SourceCard extends StatelessWidget {
     ].join(' • ');
 
     return SizedBox(
-      width: 220, // medium/small card width for mobile friendliness
+      width: 220,
       child: Material(
         color: Colors.white.withOpacity(0.06),
         borderRadius: BorderRadius.circular(16),
@@ -41,14 +41,12 @@ class SourceCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top "image" area: gradient background + favicon centered.
               SizedBox(
                 height: 90,
                 width: double.infinity,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    // Soft gradient background so the card feels rich even if favicon fails.
                     Container(
                       decoration: const BoxDecoration(
                         gradient: LinearGradient(
@@ -58,7 +56,6 @@ class SourceCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // Favicon as the "image"
                     Center(
                       child: Padding(
                         padding: const EdgeInsets.all(10.0),
@@ -74,7 +71,6 @@ class SourceCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // PDF badge (visual hint)
                     if (_isPdf)
                       Positioned(
                         top: 8,
@@ -87,19 +83,13 @@ class SourceCard extends StatelessWidget {
                           ),
                           child: const Text(
                             'PDF',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.3,
-                            ),
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.3),
                           ),
                         ),
                       ),
                   ],
                 ),
               ),
-
-              // Bottom text area: one-line fading title + optional page/bylaw line.
               Padding(
                 padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
                 child: Column(
@@ -109,25 +99,15 @@ class SourceCard extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                        // height: 1,
-                      ),
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
                     ),
-
                     if (displaySubtitle.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
                         displaySubtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.white.withOpacity(0.8),
-                        ),
+                        style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.8)),
                       ),
                     ],
                   ],

@@ -12,6 +12,7 @@ class AppHeader extends StatelessWidget {
   final ValueChanged<String> onCityChanged;
   final bool isInChatView;
   final VoidCallback? onLogoTap;
+  final VoidCallback? onAboutTap;
 
   const AppHeader({
     super.key,
@@ -19,6 +20,7 @@ class AppHeader extends StatelessWidget {
     required this.availableCities,
     required this.onCityChanged,
     required this.onLogoTap,
+    required this.onAboutTap,
     this.isInChatView = false,
   });
 
@@ -91,7 +93,9 @@ class AppHeader extends StatelessWidget {
                       cursor: SystemMouseCursors.click,
                       child: _buildNavLink(
                         "About",
-                        () => Navigator.push(context, MaterialPageRoute(builder: (context) => AboutPage()),),
+                        // 0.1x dev type shii
+                        () => (onAboutTap != null) ? onAboutTap!() : (){}
+                        //() => Navigator.push(context, MaterialPageRoute(builder: (context) => AboutPage()),),
                       ),
                     )
                 ] else

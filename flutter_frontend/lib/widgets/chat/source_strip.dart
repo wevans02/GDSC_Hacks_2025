@@ -1,9 +1,9 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import '../../core/constants.dart';
 import 'source_card.dart';
 
-/// Enables mouse-drag scrolling on web and touch drag on mobile.
-class DragScrollBehavior extends MaterialScrollBehavior {
+class _DragScrollBehavior extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => {
         PointerDeviceKind.touch,
@@ -14,16 +14,11 @@ class DragScrollBehavior extends MaterialScrollBehavior {
       };
 }
 
-/// Horizontal strip with arrows, drag-to-scroll, and edge fades.
 class SourcesStrip extends StatefulWidget {
+  const SourcesStrip({super.key, required this.sources, required this.onOpenUrl});
+
   final List<Map<String, dynamic>> sources;
   final void Function(String url) onOpenUrl;
-
-  const SourcesStrip({
-    super.key,
-    required this.sources,
-    required this.onOpenUrl,
-  });
 
   @override
   State<SourcesStrip> createState() => _SourcesStripState();
@@ -32,7 +27,6 @@ class SourcesStrip extends StatefulWidget {
 class _SourcesStripState extends State<SourcesStrip> {
   final _ctrl = ScrollController();
 
-  // Tunables should match your card + spacing
   static const double _cardWidth = 220;
   static const double _cardGap = 10;
   static const double _cardHeight = 150;
@@ -71,17 +65,12 @@ class _SourcesStripState extends State<SourcesStrip> {
     if (!_ctrl.hasClients) return;
     final pos = _ctrl.position;
     final target = (pos.pixels + delta).clamp(pos.minScrollExtent, pos.maxScrollExtent);
-    await _ctrl.animateTo(
-      target,
-      duration: const Duration(milliseconds: 260),
-      curve: Curves.easeOutCubic,
-    );
+    await _ctrl.animateTo(target, duration: const Duration(milliseconds: 260), curve: Curves.easeOutCubic);
   }
 
   @override
   Widget build(BuildContext context) {
     final sourcesToDisplay = widget.sources.take(8).toList();
-    // Scroll by ~3 cards at a time
     final double pageDelta = 3 * (_cardWidth + _cardGap);
 
     return Padding(
@@ -90,14 +79,12 @@ class _SourcesStripState extends State<SourcesStrip> {
         height: _cardHeight,
         child: Stack(
           children: [
-           
-            // The scrollable row
             ScrollConfiguration(
-              behavior: DragScrollBehavior(),
+              behavior: _DragScrollBehavior(),
               child: ListView.separated(
                 controller: _ctrl,
                 scrollDirection: Axis.horizontal,
-                physics: const ClampingScrollPhysics(), // smooth + precise on web
+                physics: const ClampingScrollPhysics(),
                 itemCount: sourcesToDisplay.length,
                 separatorBuilder: (_, __) => const SizedBox(width: _cardGap),
                 itemBuilder: (context, i) {
@@ -112,7 +99,6 @@ class _SourcesStripState extends State<SourcesStrip> {
                 },
               ),
             ),
-
             // Left arrow
             Positioned(
               left: 0,
@@ -122,16 +108,10 @@ class _SourcesStripState extends State<SourcesStrip> {
                 opacity: _canLeft ? 1 : 0,
                 duration: const Duration(milliseconds: 180),
                 child: Center(
-                  child: NavButton(
-
-                    icon: Icons.arrow_back_ios_new_rounded,
-
-                    onTap: _canLeft ? () => _scrollBy(-pageDelta) : null,
-                  ),
+                  child: _NavButton(icon: Icons.arrow_back_ios_new_rounded, onTap: _canLeft ? () => _scrollBy(-pageDelta) : null),
                 ),
               ),
             ),
-
             // Right arrow
             Positioned(
               right: 0,
@@ -141,10 +121,7 @@ class _SourcesStripState extends State<SourcesStrip> {
                 opacity: _canRight ? 1 : 0,
                 duration: const Duration(milliseconds: 180),
                 child: Center(
-                  child: NavButton(
-                    icon: Icons.arrow_forward_ios_rounded,
-                    onTap: _canRight ? () => _scrollBy(pageDelta) : null,
-                  ),
+                  child: _NavButton(icon: Icons.arrow_forward_ios_rounded, onTap: _canRight ? () => _scrollBy(pageDelta) : null),
                 ),
               ),
             ),
@@ -155,11 +132,11 @@ class _SourcesStripState extends State<SourcesStrip> {
   }
 }
 
-class NavButton extends StatelessWidget {
+class _NavButton extends StatelessWidget {
+  const _NavButton({required this.icon, this.onTap});
+
   final IconData icon;
   final VoidCallback? onTap;
-
-  const NavButton({super.key, required this.icon, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -173,11 +150,7 @@ class NavButton extends StatelessWidget {
         child: SizedBox(
           width: 36,
           height: 36,
-          child: Icon(
-            icon,
-            size: 18,
-            color: onTap == null ? Colors.white30 : Colors.white,
-          ),
+          child: Icon(icon, size: 18, color: onTap == null ? Colors.white30 : Colors.white),
         ),
       ),
     );

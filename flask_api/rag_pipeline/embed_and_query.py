@@ -123,13 +123,13 @@ def query_hybrid(mongodb_uri, db_name, col_name, query_text, city: str = None, k
     vector_results = list(col.aggregate(vector_pipeline, allowDiskUse=True))
 
     # Full detailed BM25 results
-    print("\n📘 BM25 RESULTS (FULL DETAILS):")
-    for i, r in enumerate(text_results, 1):
-        print(r)
+    # print("\n📘 BM25 RESULTS (FULL DETAILS):")
+    # for i, r in enumerate(text_results, 1):
+    #     print(r)
 
-    print("VECTOR===============")
-    for i, r in enumerate(vector_results, 1):
-        print(r)
+    # print("VECTOR===============")
+    # for i, r in enumerate(vector_results, 1):
+    #     print(r)
 
     # ---- Normalize + merge (by URL + text) ----
     merged = {}

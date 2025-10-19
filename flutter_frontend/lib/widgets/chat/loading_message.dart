@@ -1,12 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../main.dart';
-
-const loadingSteps = [
-  "Searching bylaws...",
-  "Analyzing relevant sections...",
-  "Generating natural language response...",
-];
+import '../../core/constants.dart';
 
 class LoadingMessage extends StatefulWidget {
   const LoadingMessage({super.key});
@@ -17,21 +11,20 @@ class LoadingMessage extends StatefulWidget {
 
 class _LoadingMessageState extends State<LoadingMessage> {
   int index = 0;
-  late final Timer timer;
+  Timer? timer;
 
   @override
   void initState() {
     super.initState();
-    timer = Timer.periodic(const Duration(seconds: 2), (t) {
-      setState(() {
-        index = (index + 1) % loadingSteps.length;
-      });
+    timer = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (!mounted) return;
+      setState(() => index = (index + 1) % loadingSteps.length);
     });
   }
 
   @override
   void dispose() {
-    timer.cancel();
+    timer?.cancel();
     super.dispose();
   }
 
