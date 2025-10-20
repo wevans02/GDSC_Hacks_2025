@@ -330,7 +330,7 @@ class AppHeader extends StatelessWidget {
 
                                     try {
                                       final response = await http.post(
-                                        Uri.parse("http://127.0.0.1:5000/api/feedback"),
+                                        Uri.parse("https://api.paralegalbylaw.org/api/feedback"),
                                         headers: {"Content-Type": "application/json"},
                                         body: jsonEncode({
                                           "feedback": feedback,
@@ -481,7 +481,7 @@ class _RequestCityFormState extends State<_RequestCityForm> {
 
                         try {
                           final response = await http.post(
-                            Uri.parse("http://127.0.0.1:5000/api/request-city"),
+                            Uri.parse("https://api.paralegalbylaw.org/api/request-city"),
                             headers: {"Content-Type": "application/json"},
                             body: jsonEncode({
                               "city": city,

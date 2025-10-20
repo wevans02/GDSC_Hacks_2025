@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -13,6 +17,165 @@ class AboutPage extends StatelessWidget {
   Future<void> _launch(String url) async {
     final uri = Uri.parse(url);
     await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+
+  void _showFeedbackDialog(BuildContext context) {
+    final feedbackController = TextEditingController();
+    final emailController = TextEditingController();
+    bool submitted = false;
+    bool isSubmitting = false; // NEW
+
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            if (submitted) {
+              return Dialog(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24)),
+                insetPadding:
+                    const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 500),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.check_circle,
+                            color: Colors.cyan, size: 64),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "Thanks for your feedback!",
+                          style: TextStyle(
+                              fontSize: 22, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          "We appreciate your input and will use it to improve the experience.",
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text("Close"),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              insetPadding:
+                  const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 500),
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        "Submit Feedback",
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: feedbackController,
+                        maxLines: 5,
+                        decoration: const InputDecoration(
+                          labelText: "Your feedback",
+                          border: OutlineInputBorder(),
+                        ),
+                        inputFormatters: [
+                          LengthLimitingTextInputFormatter(200),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: emailController,
+                        decoration: const InputDecoration(
+                          labelText: "Email (optional)",
+                          border: OutlineInputBorder(),
+                        ),
+                        inputFormatters: [
+                          LengthLimitingTextInputFormatter(50),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text("Cancel"),
+                          ),
+                          ElevatedButton(
+                            onPressed: isSubmitting
+                                ? null // disable during submit
+                                : () async {
+                                    final feedback = feedbackController.text.trim();
+                                    final email = emailController.text.trim();
+
+                                    if (feedback.isEmpty) return;
+
+                                    setState(() => isSubmitting = true);
+
+                                    try {
+                                      final response = await http.post(
+                                        Uri.parse("https://api.paralegalbylaw.org/api/feedback"),
+                                        headers: {"Content-Type": "application/json"},
+                                        body: jsonEncode({
+                                          "feedback": feedback,
+                                          "email": email.isNotEmpty ? email : null,
+                                        }),
+                                      );
+
+                                      if (response.statusCode == 200) {
+                                        setState(() {
+                                          submitted = true;
+                                          isSubmitting = false;
+                                        });
+                                      } else {
+                                        setState(() => isSubmitting = false);
+                                        _showError(context, "Something went wrong submitting feedback.");
+                                      }
+                                    } catch (e) {
+                                      setState(() => isSubmitting = false);
+                                      _showError(context, "Could not connect to server.");
+                                    }
+                                  },
+                            child: isSubmitting
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  )
+                                : const Text("Submit"),
+                          ),
+
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -46,15 +209,15 @@ class AboutPage extends StatelessWidget {
               children: [
                 // Headshot larger
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(150),
                   child: Image.asset(
                     'assets/images/cole_headshot.png',
-                    width: 220,
-                    height: 220,
+                    width: 300,
+                    height: 300,
                     fit: BoxFit.cover,
                   ),
                 ),
-                const SizedBox(width: 28),
+                //const SizedBox(width: 28),
                 // Text block with fixed max width for readability
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 720),
@@ -67,7 +230,7 @@ class AboutPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(100),
                   child: Image.asset(
                     'assets/images/cole_headshot.png',
                     width: 200,
@@ -75,7 +238,7 @@ class AboutPage extends StatelessWidget {
                     fit: BoxFit.cover,
                   ),
                 ),
-                const SizedBox(height: 16),
+                //const SizedBox(height: 16),
                 _IntroText(onLaunch: _launch),
               ],
             ),
@@ -95,10 +258,10 @@ class AboutPage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            "Paralegal AI uses Retrieval-Augmented Generation (RAG). "
+            "Paralegal uses Retrieval-Augmented Generation (RAG). "
             "When you ask a question, it searches real city bylaw documents and municipal resources, "
             "then summarizes in plain language — grounded in the sources it found.\n\n"
-            "Tap the source chips under any answer to open the bylaw page or PDF. "
+            "Tap the sources under any answer to open the relevant bylaw page or PDF. "
             "This makes it transparent and verifiable.",
             style: GoogleFonts.poppins(
               color: Colors.white.withOpacity(0.85),
@@ -131,7 +294,7 @@ class AboutPage extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           ElevatedButton.icon(
-            onPressed: () => _launch("https://your-feedback-form-link.com"),
+            onPressed: () => _showFeedbackDialog(context),
             icon: const Icon(Icons.feedback_outlined),
             label: const Text("Submit Feedback"),
             style: ElevatedButton.styleFrom(
@@ -175,8 +338,9 @@ class _IntroText extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          "Hi, I’m Cole 👋 — I built Paralegal AI to help make city bylaws readable and searchable by everyone.\n\n"
-          "It’s powered by modern AI retrieval tech, but focused on clarity and accessibility, not hype.\n\n"
+          "Hi, I’m Cole, A Computer Science Student at the University of Guelph.\n\n"
+          "Starting as a Hackathon Project, I built Paralegal AI to help make city bylaws readable and searchable by everyone.\n\n"
+          "It’s powered by modern AI retrieval tech, but focused on clarity and accessibility. Just ask it a question and you'll get a straightforward answer, citing the bylaws that it read to form its answer.\n\n"
           "I hope this helps you understand your city’s rules a little better.",
           style: GoogleFonts.poppins(
             color: Colors.white.withOpacity(0.88),
@@ -248,4 +412,20 @@ class _SocialIconButton extends StatelessWidget {
       ),
     );
   }
+}
+
+void _showError(BuildContext context, String msg) {
+  showDialog(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text("Error"),
+      content: Text(msg),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text("OK"),
+        ),
+      ],
+    ),
+  );
 }

@@ -32,11 +32,11 @@ from itertools import zip_longest
 from statistics import median
 
 
-START_URL = os.getenv("START_SCRAPE_URL", "https://www.waterloo.ca/en/living/bylaw-directory.aspx")
+START_URL = os.getenv("START_SCRAPE_URL", "https://www.toronto.ca/legdocs/municode/lawmcode.htm")
 ALLOWED_DOMAINS = None  # e.g. ["www.waterloo.ca"]  (None => infer from START_URL)
-OUT_DIR = Path(os.getenv("OUTPUT_DIR", "crawl_out"))
-MAX_PAGES = int(os.getenv("MAX_PAGES", "200"))
-MAX_DEPTH = int(os.getenv("MAX_DEPTH", "5"))
+OUT_DIR = Path(os.getenv("OUTPUT_DIR", "crawl_out/Toronto"))
+MAX_PAGES = int(os.getenv("MAX_PAGES", "500"))
+MAX_DEPTH = int(os.getenv("MAX_DEPTH", "2"))
 CONCURRENCY = int(os.getenv("CONCURRENCY", "4"))
 HEADLESS = os.getenv("HEADLESS", "1") != "0"
 
@@ -53,6 +53,13 @@ URL_EXCLUDE_PATTERNS = [
     r"/(login|signin|sign-in)/", r"/(admin|editor)/", r"/search", r"/careers",
     r"/events", r"/news", r"/calendar", r"/subscribe", r"/feedback",
     r"\.(jpg|jpeg|png|gif|svg|webp|ico|css|js|zip|rar|7z|tar|gz|mp4|mp3|wav|mov|avi)$",
+
+    # Toronto-specific: avoid the By-laws tab & amendment PDFs
+    # theres 2 tabs; one with updated bylaws and one with all the amendments. without exlcuding the amendments, they get mixed in, and can flood results with outdated amendments
+    r"/legdocs/bylaws/",
+    r"lawm?lists\.htm",      # By-laws tab
+    r"lawhome\.htm",
+    r"lawsearch\.htm",
 ]
 
 # Per-domain content selectors (extend as you add cities)
@@ -71,6 +78,33 @@ DOMAIN_SELECTORS: Dict[str, Dict[str, List[str]]] = {
             "#EmergencyBannerWrapperOuter", "#BrowserBannerWrapperOuter",
             "#actions", "#breadcrumbs", "footer", ".share",
             "#contactMainContainer", "#subNavContainer"
+        ],
+    },
+
+    "www.toronto.ca": {
+        # Only grab the *table* in the body, not the whole page or top tabs
+        "prefer": [
+            "#ss_municipalCode table.bylawDefault"
+        ],
+        "drop": [
+            "#ss_header",     # top navbar included via AJAX
+            "#content .tab",  # top tab strip
+            "header", "footer", "nav", ".breadcrumbs", ".share"
+        ],
+        # NEW: restrict which part of the DOM we harvest links from
+        "links_within": [
+            "#ss_municipalCode table.bylawDefault a"
+        ],
+        # NEW: allowlist URL patterns for enqueue
+        "link_allow_patterns": [
+            r"^https?://(www\.)?toronto\.ca/legdocs/municode/.*\.pdf$"
+        ],
+        # NEW: blocklist of URLs to avoid (By-laws tab + other noisy pages)
+        "link_block_patterns": [
+            r"/legdocs/bylaws/",    # amendment PDFs (you said to avoid)
+            r"lawm?lists\.htm",     # By-laws tab
+            r"lawhome\.htm",        # Home tab
+            r"lawsearch\.htm"       # Search tab
         ],
     },
 }
@@ -421,13 +455,19 @@ class BestFirstCrawler:
         if not self.frontier:
             return None
         return heapq.heappop(self.frontier)
-
+    
     async def fetch_and_extract_html(self, url: str, prefer_inner_selector: Optional[str]) -> Dict:
-        """HTML path via Playwright; returns dict with markdown/plain/links."""
         async with self.page_sem:
             page = await self.context.new_page()
             try:
                 await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                # read profile
+                netloc = urlparse(url).netloc
+                prof = DOMAIN_SELECTORS.get(netloc, {})
+                links_within = prof.get("links_within", [])
+                allow_patterns = prof.get("link_allow_patterns", [])
+                block_patterns = prof.get("link_block_patterns", [])
+
                 if prefer_inner_selector:
                     await page.wait_for_selector(prefer_inner_selector, timeout=12000)
                     inner = await page.locator(prefer_inner_selector).inner_html()
@@ -435,16 +475,75 @@ class BestFirstCrawler:
                 else:
                     content_html = await page.content()
 
-                md_out, plain = extract_with_selectors(content_html, urlparse(url).netloc)
+                md_out, plain = extract_with_selectors(content_html, netloc)
 
-                # Harvest links (after DOM ready)
-                hrefs = await page.eval_on_selector_all("a", "els => els.map(e => e.getAttribute('href'))")
+                # --- Harvest only-scoped links if provided ---
+                hrefs: List[str] = []
+                if links_within:
+                    scoped = []
+                    for sel in links_within:
+                        try:
+                            scoped += await page.eval_on_selector_all(
+                                sel, "els => els.map(e => e.getAttribute('href'))"
+                            ) or []
+                        except Exception:
+                            pass
+                    hrefs = [h for h in scoped if h]
+                else:
+                    hrefs = await page.eval_on_selector_all("a", "els => els.map(e => e.getAttribute('href'))") or []
+
+                # --- Filter links by allow/block patterns (domain-specific) ---
+                def _allowed_link(u: str) -> bool:
+                    if not u:
+                        return False
+                    import re
+                    if block_patterns and any(re.search(p, u, re.I) for p in block_patterns):
+                        return False
+                    if allow_patterns:
+                        return any(re.search(p, u, re.I) for p in allow_patterns)
+                    return True  # if no allowlist, leave to global filters
+
+                hrefs = [h for h in hrefs if _allowed_link(norm_url(url, h) or "")]
+
                 await page.close()
-                return {"success": True, "source_type": "html", "markdown": md_out, "plain": plain, "links": hrefs or []}
+                return {
+                    "success": True,
+                    "source_type": "html",
+                    "markdown": md_out,
+                    "plain": plain,
+                    "links": hrefs or []
+                }
             except Exception as e:
                 with contextlib_silent():
                     await page.close()
                 return {"success": False, "error": str(e), "links": []}
+
+    # OLD IMPLEMENTATION, this was used to scrape the waterloo site
+    # because of how to toronto site is setup, its important to only branch to links within the part of the page we get content from
+    # the new one (above) does this, the old one below does not. 
+    # async def fetch_and_extract_html(self, url: str, prefer_inner_selector: Optional[str]) -> Dict:
+    #     """HTML path via Playwright; returns dict with markdown/plain/links."""
+    #     async with self.page_sem:
+    #         page = await self.context.new_page()
+    #         try:
+    #             await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+    #             if prefer_inner_selector:
+    #                 await page.wait_for_selector(prefer_inner_selector, timeout=12000)
+    #                 inner = await page.locator(prefer_inner_selector).inner_html()
+    #                 content_html = f"<div id='__inner__'>{inner}</div>"
+    #             else:
+    #                 content_html = await page.content()
+
+    #             md_out, plain = extract_with_selectors(content_html, urlparse(url).netloc)
+
+    #             # Harvest links (after DOM ready)
+    #             hrefs = await page.eval_on_selector_all("a", "els => els.map(e => e.getAttribute('href'))")
+    #             await page.close()
+    #             return {"success": True, "source_type": "html", "markdown": md_out, "plain": plain, "links": hrefs or []}
+    #         except Exception as e:
+    #             with contextlib_silent():
+    #                 await page.close()
+    #             return {"success": False, "error": str(e), "links": []}
 
     async def fetch_and_extract_pdf(self, url: str) -> Dict:
         ok, md_text, plain, err, page_count = await fetch_pdf_text(url)

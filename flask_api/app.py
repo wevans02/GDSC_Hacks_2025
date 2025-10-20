@@ -48,9 +48,9 @@ from utils.send_email import send_email
 # City name from frontend to collection name in backend; 
 # they should be the same but from legacy some werent so I added this mapper just to be safe/flexible
 city_to_collection = {
-    "Toronto": "bylaw_chunks",
+    "Toronto": "Toronto",
     "Waterloo": "Waterloo",
-    'Guelph': 'guelph'
+    'Guelph': 'Guelph'
 }
 
 app = Flask(__name__)
@@ -240,6 +240,11 @@ def handle_query():
         status = "ok"
         ai_error = None
     except Exception as e:
+        status = "degraded"
+        ai_response = None
+        ai_error = str(e)
+
+    if ai_response.startswith("Error contacting OpenAI:"):
         status = "degraded"
         ai_response = None
         ai_error = str(e)

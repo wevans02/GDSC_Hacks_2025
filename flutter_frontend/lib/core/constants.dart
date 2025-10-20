@@ -25,4 +25,4 @@ const loadingSteps = [
 const List<String> kAvailableCities = ['Toronto', 'Waterloo', 'Guelph'];
 
 // API
-const String kApiBase = 'http://127.0.0.1:5000';
+const String kApiBase = 'https://api.paralegalbylaw.org';

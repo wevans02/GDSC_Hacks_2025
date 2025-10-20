@@ -1,188 +1,237 @@
-# 🧑‍⚖️ Paralegal AI – Toronto Bylaw Assistant
+# 🧑‍⚖️ Paralegal AI – Multi-City Municipal Bylaw Assistant
 
-This project provides a web interface to query and understand Toronto Municipal Code bylaws. It uses a **Flutter frontend**, a **Flask (Python) backend**, **MongoDB Atlas** for data storage and vector search, and the **Google Gemini API** for generating answers based on retrieved bylaw context.
+Paralegal AI is an intelligent legal assistant that helps users query and understand **municipal bylaws** across multiple cities using natural language. It combines automated web scraping, structured LLM extraction, hybrid semantic search, and AI-powered summarization to make complex local legislation accessible and transparent.
 
 ---
 
 ## ✨ Features
 
-- **Natural Language Queries**  
-  Ask questions about Toronto bylaws in plain English.
+* **Natural Language Queries**
+  Ask questions like “Can I park overnight in Guelph?” or “What’s the fine for noise violations in Waterloo?”
 
-- **Retrieval-Augmented Generation (RAG)**  
-  Finds relevant bylaw sections using MongoDB Atlas Vector Search before generating an answer.
+* **Hybrid Search (Vector + Keyword)**
+  Combines **Gemini 768‑dim embeddings** for semantic similarity and **BM25 keyword search** for precision.
 
-- **AI-Powered Answers**  
-  Uses the Google Gemini API to synthesize information from retrieved bylaws and answer user questions.
+* **Multi‑City Support**
+  Each city’s bylaws are stored in separate MongoDB collections, allowing the assistant to expand easily to new municipalities.
 
-- **Source Linking**  
-  Provides links to the original PDF source documents for the relevant bylaw chapters.
+* **Automated Data Pipeline**
+  Scrapes city websites using **Playwright** and a custom **best‑first search crawler**, then extracts and chunks text using **GPT‑5**.
 
-- **Web Interface**  
-  Clean and responsive UI built with Flutter.
+* **AI‑Generated Extraction**
+  Uses GPT‑5 via the `/responses` API to structure and summarize bylaw text into self‑contained, JSON‑formatted chunks.
+
+* **Source Linking and Metadata**
+  Every answer cites its source document (URL or PDF) and includes metadata like page numbers, section titles, and scrape timestamps.
+
+* **User‑Friendly Web Interface**
+  Built in **Flutter** and hosted on **Firebase**, the interface provides a clean, responsive chat‑style UI.
 
 ---
 
 ## 🧰 Technology Stack
 
-- **Frontend**: Flutter (Dart)  
-- **Backend**: Flask (Python)  
-- **Database**: MongoDB Atlas (Vector Search)  
-- **AI Model**: Google Gemini API
+| Layer                 | Technology                                                             |
+| --------------------- | ---------------------------------------------------------------------- |
+| **Frontend**          | Flutter Web (hosted via Firebase Hosting)                              |
+| **Backend**           | Flask (Python) – modular API with hybrid search and answer generation  |
+| **Database**          | MongoDB Atlas – BM25 + Vector Indexes (768‑dim)                        |
+| **Scraper**           | Playwright + custom Best‑First crawler                                 |
+| **LLM Extraction**    | GPT‑5 (Responses API)                                                  |
+| **Embeddings**        | Gemini `textembedding-001` (768‑dim)                                   |
+| **Answer Generation** | GPT‑4o for synthesis and reasoning                                     |
+| **Deployment**        | Cloudflare Tunnel (for backend exposure) + Firebase Hosting (frontend) |
 
-### Core Python Libraries
-`pymongo`, `google-generativeai`, `Flask`, `python-dotenv`, `sentence-transformers`, `PyMuPDF (fitz)`, `beautifulsoup4`
-
-### Core Flutter Libraries
-`http`, `flutter_markdown`, `url_launcher`, `google_fonts`, `flutter_animate`, `loading_animation_widget`
+Python libraries: `requests`, `pymongo`, `Flask`, `python-dotenv`, `tqdm`, `hashlib`, `re`, `json`, `time`
+Flutter libraries: `http`, `flutter_markdown`, `url_launcher`, `google_fonts`, `flutter_animate`
 
 ---
 
-## 📁 Project Structure
+## 🧩 System Overview
 
-GDSC_Hacks_2025/\
-├── flask_api/ # Backend Flask application\
-│ ├── templates/ # (If any Flask templates exist)\
-│ ├── static/ # (If any static files exist)\
-│ ├── venv/ # Python virtual environment\
-│ ├── .env # Environment variables (DO NOT COMMIT)\
-│ ├── requirements.txt # Python dependencies\
-│ ├── app.py # Main Flask app\
-│ ├── create_database.py\
-│ ├── embed_vectors.py\
-│ ├── parse_html.py\
-│ ├── query_database.py\
-│ ├── python_to_gemini.py\
-│ ├── chunk_text.py\
-│ ├── lawmcode.htm # Source HTML file (manual download)\
-│ └── ...\
-│\
-├── flutter_frontend/ # Frontend Flutter app\
-│ ├── lib/\
-│ │ └── main.dart\
-│ ├── assets/\
-│ ├── web/\
-│ ├── pubspec.yaml\
-│ └── ...\
-│\
-└── README.md # This file\
+```text
+                ┌────────────────────────────┐
+                │  City Websites (HTML/PDF)  │
+                └────────────┬───────────────┘
+                             │
+               (1) Scrape via Playwright BFS
+                             │
+                ┌────────────▼────────────┐
+                │ Markdown & Metadata Out │
+                │  (crawl_out/markdown)   │
+                └────────────┬────────────┘
+                             │
+              (2) GPT‑5 Extraction Pass
+        → structured JSON chunks (llm_chunks_out/)
+                             │
+                ┌────────────▼────────────┐
+                │ Gemini Embeddings (768) │
+                │ MongoDB Hybrid Index    │
+                └────────────┬────────────┘
+                             │
+            (3) Flask Hybrid Search API
+                             │
+                ┌────────────▼────────────┐
+                │   Flutter Web Client    │
+                │   (Firebase Hosting)    │
+                └─────────────────────────┘
+```
 
+---
 
-## ⚙️ Setup Instructions
+## ⚙️ Pipeline Stages
+
+### **1. Scraping & Preprocessing**
+
+* Uses **Playwright** for dynamic rendering (JS‑enabled pages).
+* A **best‑first search** algorithm crawls pages by relevance score and link depth.
+* HTML and PDF pages are handled separately:
+
+  * **HTML** → Markdown conversion.
+  * **PDFs** → Extracted via PyMuPDF.
+
+### **2. Chunk Extraction (LLM Pass)**
+
+* Each page is processed by **GPT‑5** using the `/responses` API.
+* Produces rich JSON objects containing sections, summaries, cross‑references, and contextual metadata.
+* All invalid JSON is automatically cleaned and retried.
+
+### **3. Embedding & Database Ingestion**
+
+* Chunks are embedded using **Gemini `textembedding-001`**.
+* Stored in MongoDB with schema:
+
+  ```json
+  {
+    "combined_text": "...",
+    "embedding": [...],
+    "city": "Waterloo",
+    "page_title": "Nuisance Bylaw",
+    "url": "https://...",
+    "scraped_at": "2025-10-18T03:12:00Z",
+    "section_title": "Definitions",
+    "content_type": "bylaw",
+    "chunk_hash": "abc123",
+    ...
+  }
+  ```
+
+### **4. Query & Response Generation**
+
+* The **Flask API** performs hybrid retrieval using `$search.knnBeta` (vector) and BM25 keyword clauses.
+* The top results are passed to **GPT‑4o**, which synthesizes a concise, well‑cited answer.
+* Responses include source citations, links, and optional page numbers.
+
+---
+
+## 🧠 Example Query Flow
+
+1. User: *“Can I have a fire pit in my backyard in Waterloo?”*
+2. Flask API retrieves top chunks via hybrid search.
+3. GPT‑4o analyzes retrieved text and generates an answer:
+
+   > “Backyard fires are prohibited unless approved by the Fire Chief. Permits are required for contained recreational fires.”
+4. Sources displayed with links to the official bylaw pages.
+
+---
+
+## 🧾 Setup Instructions
 
 ### ✅ Prerequisites
 
-- Git
-- Python 3.8+ and pip
-- Flutter SDK
-- A MongoDB Atlas Account (Free M0 Tier)
-- A Google Gemini API Key (get it from Google AI Studio)
+* Python 3.9+
+* Flutter SDK
+* MongoDB Atlas account (free M0 tier)
+* Google API key for **Gemini**
+* OpenAI API key for **GPT‑4o**
+
+### 1. Clone & Environment
+
+```bash
+git clone https://github.com/<yourname>/Paralegal-AI.git
+cd Paralegal-AI/flask_api
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+Create `.env`:
+
+```bash
+DATABASE_LOGIN=username:password
+DB_NAME=Bylaws
+COLLECTION_NAME=Waterloo
+CITY=Waterloo
+GEMINI_API_KEY=your_google_api_key
+OPENAI_API_KEY=your_openai_api_key
+```
+
+### 2. Run Extraction & Embedding
+
+```bash
+python chunk_llm_pass.py    # Extract structured chunks with GPT‑5
+python ingest_embeddings.py # Embed & upload to MongoDB
+```
+
+### 3. Run the Backend
+
+```bash
+flask run --host=0.0.0.0 --port=5000
+```
+
+### 4. Run the Frontend
+
+```bash
+cd ../flutter_frontend
+flutter pub get
+flutter run -d chrome
+```
 
 ---
 
-### 🐍 1. Backend Setup (`flask_api`)
+## 🚀 Deployment
+
+**Frontend:** Firebase Hosting (auto‑deployed Flutter build)
 
 ```bash
-cd flask_api
-
-# Create virtual environment
-python -m venv venv
-
-# Activate virtual environment
-# Windows:
-.\venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-🧾 Download Bylaw Source HTML
-Go to: https://www.toronto.ca/legdocs/municode/toronto-code-chapters.shtml
+flutter build web --release
+firebase deploy
 ```
 
-Save the HTML content as lawmcode.htm in the flask_api folder.
+**Backend:** Dockerized Flask app exposed securely via **Cloudflare Tunnel**.
 
-🔐 Create a .env file
+* Run `docker compose up -d`
+* Ensure `.env` secrets are included via Docker environment variables.
 
-DATABASE_LOGIN=username:password
-GEMINI_API_KEY=your_gemini_api_key
-🏗 Populate the Database
+**Security Recommendations:**
 
-python create_database.py
-⚠️ This script downloads many PDFs, embeds content, and uploads to MongoDB. It may take some time.
+* Limit CORS origins to your Firebase domain.
+* Restrict MongoDB Atlas IP whitelist to your backend host.
+* Enable HTTPS and Cloudflare DDoS protection.
+* Add request‑rate limiting middleware (Flask‑Limiter or NGINX).
 
-💻 2. Frontend Setup (flutter_frontend)
+---
 
-cd ../flutter_frontend
-flutter pub get
-🔧 Configure Backend URL
-Edit lib/main.dart:
+## 📊 Benchmarking & Testing
 
+* **Manual Testing:** Currently verified using curated QA questions for each city.
+* **Planned Metrics:**
 
-final uri = Uri.parse('http://127.0.0.1:5000/api/query'); // For local dev
-For deployment, change this to your hosted backend URL.
+  * Recall @ top‑k for hybrid retrieval
+  * Extraction JSON validity rate
+  * Average latency (scrape → answer)
+  * Cost per document for embedding + LLM extraction
 
-🔑 Environment Variables
-Set these for the backend via .env (locally) or platform secrets (in production):
+---
 
-DATABASE_LOGIN: MongoDB Atlas login (username:password)
+## 🗺 Future Roadmap
 
-GEMINI_API_KEY: Google Gemini API key
+* ✅ Expand to more Ontario cities (Toronto, Guelph, Waterloo, etc.)
+* ⚙️ Add automatic re‑scraping and incremental updates
+* 📈 Build benchmarking suite for QA validation
+* 🎙 Voice‑enabled access for hands‑free bylaw lookup
+* 🧑‍💼 City partnership integration (data synchronization + co‑branding)
 
-▶️ Running Locally
-Start the Flask Backend
+---
 
-cd flask_api
-source venv/bin/activate  # if not already activated
-flask run --host=0.0.0.0  # Runs on port 5000
-Start the Flutter Frontend
-
-cd ../flutter_frontend
-flutter run -d chrome
-Ensure the API URL in main.dart points to your local backend.
-
-🚀 Deployment
-Frontend (Flutter Web)
-
-flutter build web --release
-Host build/web on:
-
-Firebase Hosting
-
-GitHub Pages
-
-Netlify
-
-Vercel
-
-Render
-
-Backend (Flask)
-Deploy flask_api to:
-
-Render
-
-PythonAnywhere
-
-Fly.io
-
-Google Cloud Run
-
-AWS (free tier)
-
-Use Gunicorn (included in requirements.txt) and set debug=False.
-
-🔒 Deployment Security Tips
-CORS: Only allow frontend domain.
-
-Secrets: Use environment variables. Never commit .env.
-
-DB Access: Restrict MongoDB Atlas to your backend IPs.
-
-HTTPS: Always enable HTTPS in production.
-
-🤝 Contributing
-(Add guidelines if you'd like others to contribute)
-
-📝 License
-(Add your license here, e.g., MIT License)
+**Paralegal AI** — Making municipal law accessible, transparent, and searchable for everyone.

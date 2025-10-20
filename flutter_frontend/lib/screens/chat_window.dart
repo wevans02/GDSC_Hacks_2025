@@ -118,23 +118,24 @@ class _ChatWindowState extends State<ChatWindow> {
       // Handle network/CORS/other request errors
       result = {
         'ai_response':
-            '⚠️ Network or CORS Error.\n\nMake sure the backend server is running and accessible (check browser console for details).',
+            'Oops! Theres an issue on my end. Consider sending feedback or emailing (colewesterveld AT gmail DOT com) me explaining what happened so I can fix it in the future.\n Thanks for your patience.',
         'retrieved_sources': <Map<String, dynamic>>[],
       };
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('⚠️ Network or CORS error — see chat for details.'),
-            backgroundColor: Colors.redAccent,
-            duration: Duration(seconds: 4),
-          ),
-        );
-      }
+      // if (mounted) {
+      //   ScaffoldMessenger.of(context).showSnackBar(
+      //     const SnackBar(
+      //       content: Text('⚠️ Network or CORS error — see chat for details.'),
+      //       backgroundColor: Colors.redAccent,
+      //       duration: Duration(seconds: 4),
+      //     ),
+      //   );
+      // }
     }
 
     final aiText = result['ai_response'] as String? ??
-        '⚠️ Unknown error occurred. Please try again.';
+        'Unknown error occurred. \nPlease try again.\n Consider sending feedback  or emailing me (colewesterveld AT gmail DOT com) explaining what heppened so I can fix it in the future.';
+
     final rawSources =
         (result['retrieved_sources'] as List<Map<String, dynamic>>?) ?? [];
 
