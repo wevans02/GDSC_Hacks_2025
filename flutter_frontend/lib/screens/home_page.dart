@@ -19,7 +19,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   bool _isInChatView = false;
   String? _initialQuery;
-  String _selectedCity = 'Toronto';
+  String _selectedCity = 'Waterloo';
   int _chatEpoch = 0;
 
   String _selectedPage = 'home'; // can be 'home' or 'about'

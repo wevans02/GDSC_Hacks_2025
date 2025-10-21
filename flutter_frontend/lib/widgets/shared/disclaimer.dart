@@ -42,7 +42,7 @@ class DisclaimerFooter extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                '© 2024 Paralegal AI • ',
+                '© 2025 Paralegal AI • ',
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.4),
                   fontSize: 10,
@@ -83,7 +83,7 @@ class DisclaimerFooter extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                '© 2024 Paralegal AI • ',
+                '© 2025 Paralegal AI • ',
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.4),
                   fontSize: 10,

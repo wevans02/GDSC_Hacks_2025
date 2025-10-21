@@ -181,7 +181,7 @@ class AboutPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-    final isWide = width >= 760; // breakpoint for row vs column
+    final isWide = width >= 1080; // breakpoint for row vs column
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
@@ -261,8 +261,8 @@ class AboutPage extends StatelessWidget {
             "Paralegal uses Retrieval-Augmented Generation (RAG). "
             "When you ask a question, it searches real city bylaw documents and municipal resources, "
             "then summarizes in plain language — grounded in the sources it found.\n\n"
-            "Tap the sources under any answer to open the relevant bylaw page or PDF. "
-            "This makes it transparent and verifiable.",
+            "Tap the sources under any answer to open the relevant bylaw page or PDF.",
+            // "This makes it transparent and verifiable.",
             style: GoogleFonts.poppins(
               color: Colors.white.withOpacity(0.85),
               fontSize: 16,
@@ -339,9 +339,9 @@ class _IntroText extends StatelessWidget {
         const SizedBox(height: 12),
         Text(
           "Hi, I’m Cole, A Computer Science Student at the University of Guelph.\n\n"
-          "Starting as a Hackathon Project, I built Paralegal AI to help make city bylaws readable and searchable by everyone.\n\n"
-          "It’s powered by modern AI retrieval tech, but focused on clarity and accessibility. Just ask it a question and you'll get a straightforward answer, citing the bylaws that it read to form its answer.\n\n"
-          "I hope this helps you understand your city’s rules a little better.",
+          "Starting as a hackathon project with teammates from U of Guelph, I built Paralegal AI to help make city bylaws readable and searchable by everyone.\n\n"
+          "It’s powered by modern AI retrieval tech, but focused on clarity and accessibility. Just ask it a question and you'll get a straightforward answer, citing the bylaws that it read to form its answer.\n\n",
+          // "I hope this helps you understand your city’s rules a little better.",
           style: GoogleFonts.poppins(
             color: Colors.white.withOpacity(0.88),
             fontSize: 16,
