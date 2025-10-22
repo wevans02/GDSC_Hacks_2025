@@ -227,7 +227,7 @@ class AboutPage extends StatelessWidget {
             )
           else
             Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(100),
