@@ -155,8 +155,8 @@ class AppHeader extends StatelessWidget {
     );
   }
 
-  Widget _showAboutPage(BuildContext context){
-    return Text("TODO");
+  void _showAboutPage(BuildContext context){
+    (onAboutTap != null) ? onAboutTap!() : (){};
   }
 
   Widget _buildCityDropdown(BuildContext context) {

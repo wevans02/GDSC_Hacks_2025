@@ -232,9 +232,9 @@ class _ChatWindowState extends State<ChatWindow> {
 
   final List<String> _examplePrompts = const [
     "What are the rules for parking overnight?",
-    "What are the noise bylaw hours?",
     "Can I build a fence in my backyard?",
     "What are snow removal rules?",
+    "how to dispute a parking ticket"
   ];
 
 
